@@ -1,0 +1,45 @@
+# Byte-compiled / cache
+__pycache__/
+*.py[cod]
+*$py.class
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+
+# Model checkpoints (large binaries — use Git LFS / external storage instead)
+*.pt
+*.pth
+*.onnx
+*.ckpt
+
+# Datasets (large / often licensed — don't commit raw data)
+backend/datasets/classifier/
+backend/datasets/segmenter/
+backend/datasets/type_classifier/
+backend/datasets/raw/
+
+# Runtime outputs / logs
+backend/outputs/*
+!backend/outputs/.gitkeep
+*.log
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Env / secrets
+.env
+.env.*
