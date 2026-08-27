@@ -1,0 +1,359 @@
+<?xml version="1.0" encoding="utf-8"?>
+<annotations>
+  <version>1.1</version>
+  <meta>
+    <job>
+      <segments>
+        <segment>
+          <id>34269</id>
+          <start>0</start>
+          <stop>39</stop>
+          <url>https://cvat2.trainingdata.solutions/api/jobs/34269</url>
+        </segment>
+      </segments>
+      <owner>
+        <username>TrainingData</username>
+        <email/>
+      </owner>
+      
+      <labels>
+        <label>
+          <name>text</name>
+          <color>#3d3df5</color>
+          <type>rectangle</type>
+          <attributes>
+            <attribute>
+              <name>text</name>
+              <mutable>False</mutable>
+              <input_type>text</input_type>
+              <default_value/>
+              <values/>
+            </attribute>
+          </attributes>
+        </label>
+      </labels>
+    </job>
+    <dumped>2023-09-04 05:58:11.286859+00:00</dumped>
+  </meta>
+  <image id="0" name="images/0.png" width="700" height="200">
+    <box label="text" source="manual" occluded="0" xtl="31.68" ytl="30.29" xbr="631.42" ybr="44.25" z_order="0">
+      <attribute name="text">P&lt;NLDDE&lt;KAI&lt;&lt;LIZZY&lt;KUIJPERS&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;</attribute>
+    </box>
+    <box label="text" source="manual" occluded="0" xtl="31.78" ytl="68.67" xbr="630.20" ybr="85.63" z_order="0">
+      <attribute name="text">XSFOV20002NLD3000308M961670281586310&lt;&lt;&lt;&lt;&lt;73</attribute>
+    </box>
+  </image>
+  <image id="1" name="images/1.png" width="700" height="200">
+    <box label="text" source="manual" occluded="0" xtl="31.68" ytl="30.29" xbr="631.42" ybr="44.25" z_order="0">
+      <attribute name="text">P&lt;NLDDE&lt;EVELIEN&lt;&lt;LUCA&lt;VANDEBRINK&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;</attribute>
+    </box>
+    <box label="text" source="manual" occluded="0" xtl="31.78" ytl="68.67" xbr="630.30" ybr="85.63" z_order="0">
+      <attribute name="text">OAFDB20022NLD9921762M358144421440964&lt;&lt;&lt;&lt;&lt;87</attribute>
+    </box>
+  </image>
+  <image id="2" name="images/2.png" width="700" height="200">
+    <box label="text" source="manual" occluded="0" xtl="31.68" ytl="30.29" xbr="631.42" ybr="44.25" z_order="0">
+      <attribute name="text">P&lt;NLDDE&lt;SIEM&lt;&lt;THIJS&lt;GARRET&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;</attribute>
+    </box>
+    <box label="text" source="manual" occluded="0" xtl="31.78" ytl="68.67" xbr="630.30" ybr="85.63" z_order="0">
+      <attribute name="text">CYUKR19732NLD8203471M883114892168470&lt;&lt;&lt;&lt;&lt;79</attribute>
+    </box>
+  </image>
+  <image id="3" name="images/3.png" width="700" height="200">
+    <box label="text" source="manual" occluded="0" xtl="31.68" ytl="30.29" xbr="631.42" ybr="44.25" z_order="0">
+      <attribute name="text">P&lt;NLDDE&lt;MATTHIJS&lt;&lt;BRITT&lt;VANGINNEKE&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;</attribute>
+    </box>
+    <box label="text" source="manual" occluded="0" xtl="31.78" ytl="68.67" xbr="630.00" ybr="85.63" z_order="0">
+      <attribute name="text">KZUQT20002NLD7437096M340040191409516&lt;&lt;&lt;&lt;&lt;48</attribute>
+    </box>
+  </image>
+  <image id="4" name="images/4.png" width="700" height="200">
+    <box label="text" source="manual" occluded="0" xtl="31.78" ytl="68.67" xbr="629.90" ybr="85.63" z_order="0">
+      <attribute name="text">RAXI020042NLD9853160M709532647602943&lt;&lt;&lt;&lt;&lt;26</attribute>
+    </box>
+    <box label="text" source="manual" occluded="0" xtl="31.68" ytl="30.29" xbr="631.42" ybr="44.25" z_order="0">
+      <attribute name="text">P&lt;NLDDE&lt;YARA&lt;&lt;WESLEY&lt;VERSCHUT&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;</attribute>
+    </box>
+  </image>
+  <image id="5" name="images/5.png" width="700" height="200">
+    <box label="text" source="manual" occluded="0" xtl="31.78" ytl="68.67" xbr="627.50" ybr="85.63" z_order="0">
+      <attribute name="text">MLJZV19752NLD8264533M439741164191856&lt;&lt;&lt;&lt;&lt;91</attribute>
+    </box>
+    <box label="text" source="manual" occluded="0" xtl="31.68" ytl="30.29" xbr="631.42" ybr="44.25" z_order="0">
+      <attribute name="text">P&lt;NLDDE&lt;BJORN&lt;&lt;JADE&lt;SCHIFFER&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;</attribute>
+    </box>
+  </image>
+  <image id="6" name="images/6.png" width="700" height="200">
+    <box label="text" source="manual" occluded="0" xtl="31.68" ytl="30.29" xbr="631.42" ybr="44.25" z_order="0">
+      <attribute name="text">P&lt;NLDDE&lt;KARLIJN&lt;&lt;BIBI&lt;FRANCOISE&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;</attribute>
+    </box>
+    <box label="text" source="manual" occluded="0" xtl="31.78" ytl="68.67" xbr="630.20" ybr="85.63" z_order="0">
+      <attribute name="text">CBIFZ19672NLD8898593F946737807977304&lt;&lt;&lt;&lt;&lt;73</attribute>
+    </box>
+  </image>
+  <image id="7" name="images/7.png" width="700" height="200">
+    <box label="text" source="manual" occluded="0" xtl="31.78" ytl="68.67" xbr="627.50" ybr="85.63" z_order="0">
+      <attribute name="text">VEDDQ19992NLD3920684F894488962941723&lt;&lt;&lt;&lt;&lt;71</attribute>
+    </box>
+    <box label="text" source="manual" occluded="0" xtl="31.68" ytl="30.29" xbr="631.42" ybr="44.25" z_order="0">
+      <attribute name="text">P&lt;NLDDE&lt;MAUD&lt;&lt;JOEY&lt;HOELEN&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;</attribute>
+    </box>
+  </image>
+  <image id="8" name="images/8.png" width="700" height="200">
+    <box label="text" source="manual" occluded="0" xtl="31.78" ytl="68.67" xbr="630.50" ybr="85.63" z_order="0">
+      <attribute name="text">GJZWB19762NLD8693177M646687001859858&lt;&lt;&lt;&lt;&lt;43</attribute>
+    </box>
+    <box label="text" source="manual" occluded="0" xtl="31.68" ytl="30.29" xbr="631.42" ybr="44.25" z_order="0">
+      <attribute name="text">P&lt;NLDDE&lt;INAYA&lt;&lt;ZOE&lt;VANROSSUM&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;</attribute>
+    </box>
+  </image>
+  <image id="9" name="images/9.png" width="700" height="200">
+    <box label="text" source="manual" occluded="0" xtl="31.78" ytl="68.67" xbr="630.40" ybr="85.63" z_order="0">
+      <attribute name="text">BVBHP19672NLD4691351M284010469375054&lt;&lt;&lt;&lt;&lt;79</attribute>
+    </box>
+    <box label="text" source="manual" occluded="0" xtl="31.68" ytl="30.29" xbr="631.42" ybr="44.25" z_order="0">
+      <attribute name="text">P&lt;NLDDE&lt;LISANNE&lt;&lt;MIKE&lt;HOLLANDER&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;</attribute>
+    </box>
+  </image>
+  <image id="10" name="images/10.png" width="700" height="200">
+    <box label="text" source="manual" occluded="0" xtl="31.78" ytl="68.67" xbr="630.10" ybr="85.63" z_order="0">
+      <attribute name="text">YCGEZ19792NLD5151093M821467874454095&lt;&lt;&lt;&lt;&lt;44</attribute>
+    </box>
+    <box label="text" source="manual" occluded="0" xtl="31.68" ytl="30.29" xbr="631.42" ybr="44.25" z_order="0">
+      <attribute name="text">P&lt;NLDDE&lt;STAN&lt;&lt;KAY&lt;BAKKER&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;</attribute>
+    </box>
+  </image>
+  <image id="11" name="images/11.png" width="700" height="200">
+    <box label="text" source="manual" occluded="0" xtl="31.68" ytl="30.29" xbr="631.42" ybr="44.25" z_order="0">
+      <attribute name="text">P&lt;NLDDE&lt;JET&lt;&lt;ROWAN&lt;VANNUS&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;</attribute>
+    </box>
+    <box label="text" source="manual" occluded="0" xtl="31.78" ytl="68.67" xbr="630.30" ybr="85.63" z_order="0">
+      <attribute name="text">EHTML19642NLD9162622F176922786548490&lt;&lt;&lt;&lt;&lt;80</attribute>
+    </box>
+  </image>
+  <image id="12" name="images/12.png" width="700" height="200">
+    <box label="text" source="manual" occluded="0" xtl="31.78" ytl="68.67" xbr="629.90" ybr="85.63" z_order="0">
+      <attribute name="text">QWKII19642NLD6432046F701188012856199&lt;&lt;&lt;&lt;&lt;89</attribute>
+    </box>
+    <box label="text" source="manual" occluded="0" xtl="31.68" ytl="30.29" xbr="631.42" ybr="44.25" z_order="0">
+      <attribute name="text">P&lt;NLDDE&lt;JINTHE&lt;&lt;SIL&lt;SCHUYLENBORCH&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;</attribute>
+    </box>
+  </image>
+  <image id="13" name="images/13.png" width="700" height="200">
+    <box label="text" source="manual" occluded="0" xtl="31.78" ytl="68.67" xbr="630.30" ybr="85.63" z_order="0">
+      <attribute name="text">NQRTC19612NLD3248815M925318531653649&lt;&lt;&lt;&lt;&lt;76</attribute>
+    </box>
+    <box label="text" source="manual" occluded="0" xtl="31.68" ytl="30.29" xbr="631.42" ybr="44.25" z_order="0">
+      <attribute name="text">P&lt;NLDDE&lt;MARA&lt;&lt;ZARA&lt;VANWAAS&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;</attribute>
+    </box>
+  </image>
+  <image id="14" name="images/14.png" width="700" height="200">
+    <box label="text" source="manual" occluded="0" xtl="31.78" ytl="68.67" xbr="630.10" ybr="85.63" z_order="0">
+      <attribute name="text">UGBWB19822NLD4311941M643024789944272&lt;&lt;&lt;&lt;&lt;99</attribute>
+    </box>
+    <box label="text" source="manual" occluded="0" xtl="31.68" ytl="30.29" xbr="631.42" ybr="44.25" z_order="0">
+      <attribute name="text">P&lt;NLDDE&lt;ROMY&lt;&lt;JOSHUA&lt;VANVLAANDEREN&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;</attribute>
+    </box>
+  </image>
+  <image id="15" name="images/15.png" width="700" height="200">
+    <box label="text" source="manual" occluded="0" xtl="31.78" ytl="68.67" xbr="630.50" ybr="85.63" z_order="0">
+      <attribute name="text">JWRZE19892NLD4219130F239507467875059&lt;&lt;&lt;&lt;&lt;20</attribute>
+    </box>
+    <box label="text" source="manual" occluded="0" xtl="31.68" ytl="30.29" xbr="631.42" ybr="44.25" z_order="0">
+      <attribute name="text">P&lt;NLDDE&lt;ANNEMIJN&lt;&lt;SARA&lt;VANARNSBERG&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;</attribute>
+    </box>
+  </image>
+  <image id="16" name="images/16.png" width="700" height="200">
+    <box label="text" source="manual" occluded="0" xtl="31.78" ytl="68.67" xbr="630.70" ybr="85.63" z_order="0">
+      <attribute name="text">XGTJD19692NLD2699028M428703280537041&lt;&lt;&lt;&lt;&lt;40</attribute>
+    </box>
+    <box label="text" source="manual" occluded="0" xtl="31.68" ytl="30.29" xbr="631.42" ybr="44.25" z_order="0">
+      <attribute name="text">P&lt;NLDDE&lt;JENS&lt;&lt;JAYDA&lt;VERHAREN&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;</attribute>
+    </box>
+  </image>
+  <image id="17" name="images/17.png" width="700" height="200">
+    <box label="text" source="manual" occluded="0" xtl="31.68" ytl="30.29" xbr="631.42" ybr="44.25" z_order="0">
+      <attribute name="text">P&lt;NLDDE&lt;RICK&lt;&lt;LEAH&lt;VANDERLEEK&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;</attribute>
+    </box>
+    <box label="text" source="manual" occluded="0" xtl="31.78" ytl="68.67" xbr="630.50" ybr="85.63" z_order="0">
+      <attribute name="text">VYPNY19662NLD5590813F970821091147972&lt;&lt;&lt;&lt;&lt;43</attribute>
+    </box>
+  </image>
+  <image id="18" name="images/18.png" width="700" height="200">
+    <box label="text" source="manual" occluded="0" xtl="31.78" ytl="68.67" xbr="627.70" ybr="85.63" z_order="0">
+      <attribute name="text">IRDQP19832NLD8250871M940743445732377&lt;&lt;&lt;&lt;&lt;71</attribute>
+    </box>
+    <box label="text" source="manual" occluded="0" xtl="31.68" ytl="30.29" xbr="631.42" ybr="44.25" z_order="0">
+      <attribute name="text">P&lt;NLDDE&lt;VICTORIA&lt;&lt;JET&lt;HOLTHUIS&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;</attribute>
+    </box>
+  </image>
+  <image id="19" name="images/19.png" width="700" height="200">
+    <box label="text" source="manual" occluded="0" xtl="31.78" ytl="68.67" xbr="629.80" ybr="85.63" z_order="0">
+      <attribute name="text">BIRAF19582NLD3568025M293275156639088&lt;&lt;&lt;&lt;&lt;85</attribute>
+    </box>
+    <box label="text" source="manual" occluded="0" xtl="31.68" ytl="30.29" xbr="631.42" ybr="44.25" z_order="0">
+      <attribute name="text">P&lt;NLDDE&lt;CHARLOTTE&lt;&lt;NINTHE&lt;HAZENVELD&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;</attribute>
+    </box>
+  </image>
+  <image id="20" name="images/20.png" width="700" height="200">
+    <box label="text" source="manual" occluded="0" xtl="31.78" ytl="68.67" xbr="630.20" ybr="85.63" z_order="0">
+      <attribute name="text">GFFXR19782NDL7999472F172392692374556&lt;&lt;&lt;&lt;&lt;38</attribute>
+    </box>
+    <box label="text" source="manual" occluded="0" xtl="31.68" ytl="30.29" xbr="631.42" ybr="44.25" z_order="0">
+      <attribute name="text">P&lt;NLDDE&lt;LIEKE&lt;&lt;JAYLINN&lt;VANPARIJS&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;</attribute>
+    </box>
+  </image>
+  <image id="21" name="images/21.png" width="700" height="200">
+    <box label="text" source="manual" occluded="0" xtl="31.78" ytl="68.67" xbr="630.30" ybr="85.63" z_order="0">
+      <attribute name="text">SMPLJ19722NLD3253728M113944094454372&lt;&lt;&lt;&lt;&lt;63</attribute>
+    </box>
+    <box label="text" source="manual" occluded="0" xtl="31.68" ytl="30.29" xbr="631.42" ybr="44.25" z_order="0">
+      <attribute name="text">P&lt;NLDDE&lt;JURRE&lt;&lt;JACOB&lt;ELBERTSE&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;</attribute>
+    </box>
+  </image>
+  <image id="22" name="images/22.png" width="700" height="200">
+    <box label="text" source="manual" occluded="0" xtl="31.78" ytl="68.67" xbr="630.00" ybr="85.63" z_order="0">
+      <attribute name="text">OKFKW20012NLD3113881M210642829950439&lt;&lt;&lt;&lt;&lt;13</attribute>
+    </box>
+    <box label="text" source="manual" occluded="0" xtl="31.68" ytl="30.29" xbr="631.42" ybr="44.25" z_order="0">
+      <attribute name="text">P&lt;NLDDE&lt;BO&lt;&lt;RIK&lt;GROEN&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;</attribute>
+    </box>
+  </image>
+  <image id="23" name="images/23.png" width="700" height="200">
+    <box label="text" source="manual" occluded="0" xtl="34.00" ytl="68.67" xbr="630.70" ybr="85.63" z_order="0">
+      <attribute name="text">ISSBM19672NLD1452864F850023933554709&lt;&lt;&lt;&lt;&lt;20</attribute>
+    </box>
+    <box label="text" source="manual" occluded="0" xtl="31.68" ytl="30.29" xbr="631.42" ybr="44.25" z_order="0">
+      <attribute name="text">P&lt;NLDDE&lt;MARK&lt;&lt;ROBIN&lt;SCHILT&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;</attribute>
+    </box>
+  </image>
+  <image id="24" name="images/24.png" width="700" height="200">
+    <box label="text" source="manual" occluded="0" xtl="33.60" ytl="68.67" xbr="630.50" ybr="85.63" z_order="0">
+      <attribute name="text">IMJMI19642NLD1804397M427466648056537&lt;&lt;&lt;&lt;&lt;47</attribute>
+    </box>
+    <box label="text" source="manual" occluded="0" xtl="31.68" ytl="30.29" xbr="631.42" ybr="44.25" z_order="0">
+      <attribute name="text">P&lt;NLDDE&lt;LORENZO&lt;&lt;SIEM&lt;PRATT&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;</attribute>
+    </box>
+  </image>
+  <image id="25" name="images/25.png" width="700" height="200">
+    <box label="text" source="manual" occluded="0" xtl="31.68" ytl="30.29" xbr="631.42" ybr="44.25" z_order="0">
+      <attribute name="text">P&lt;NLDDE&lt;JAYDA&lt;&lt;GIOVANNI&lt;CARNOTTE&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;</attribute>
+    </box>
+    <box label="text" source="manual" occluded="0" xtl="31.78" ytl="68.67" xbr="627.90" ybr="85.63" z_order="0">
+      <attribute name="text">PVIGD19772NLD2825565F553910651340456&lt;&lt;&lt;&lt;&lt;61</attribute>
+    </box>
+  </image>
+  <image id="26" name="images/26.png" width="700" height="200">
+    <box label="text" source="manual" occluded="0" xtl="31.68" ytl="30.29" xbr="631.42" ybr="44.25" z_order="0">
+      <attribute name="text">P&lt;NLDDE&lt;EVA&lt;&lt;TIES&lt;WOLZAK&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;</attribute>
+    </box>
+    <box label="text" source="manual" occluded="0" xtl="31.78" ytl="68.67" xbr="630.40" ybr="85.63" z_order="0">
+      <attribute name="text">QSKSP20042NLD9634282M814693529828782&lt;&lt;&lt;&lt;&lt;18</attribute>
+    </box>
+  </image>
+  <image id="27" name="images/27.png" width="700" height="200">
+    <box label="text" source="manual" occluded="0" xtl="31.78" ytl="68.67" xbr="630.20" ybr="85.63" z_order="0">
+      <attribute name="text">HMOVN19912NLD2497901M704101942399306&lt;&lt;&lt;&lt;&lt;14</attribute>
+    </box>
+    <box label="text" source="manual" occluded="0" xtl="31.68" ytl="30.29" xbr="631.42" ybr="44.25" z_order="0">
+      <attribute name="text">P&lt;NLDDE&lt;DANA&lt;&lt;AMINA&lt;SERRA&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;</attribute>
+    </box>
+  </image>
+  <image id="28" name="images/28.png" width="700" height="200">
+    <box label="text" source="manual" occluded="0" xtl="31.78" ytl="68.67" xbr="630.00" ybr="85.63" z_order="0">
+      <attribute name="text">FQEEX19732NLD7447774F875470173384626&lt;&lt;&lt;&lt;&lt;72</attribute>
+    </box>
+    <box label="text" source="manual" occluded="0" xtl="31.68" ytl="30.29" xbr="631.42" ybr="44.25" z_order="0">
+      <attribute name="text">P&lt;NLDDE&lt;STELLA&lt;&lt;FLORIAN&lt;BASTIAANSE&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;</attribute>
+    </box>
+  </image>
+  <image id="29" name="images/29.png" width="700" height="200">
+    <box label="text" source="manual" occluded="0" xtl="31.78" ytl="68.67" xbr="630.30" ybr="85.63" z_order="0">
+      <attribute name="text">DZBJM19882NLD8370322M314609473230779&lt;&lt;&lt;&lt;&lt;66</attribute>
+    </box>
+    <box label="text" source="manual" occluded="0" xtl="31.68" ytl="30.29" xbr="631.42" ybr="44.25" z_order="0">
+      <attribute name="text">P&lt;NLDDE&lt;KEANO&lt;&lt;MILO&lt;WESTERBURG&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;</attribute>
+    </box>
+  </image>
+  <image id="30" name="images/30.png" width="700" height="200">
+    <box label="text" source="manual" occluded="0" xtl="31.68" ytl="30.29" xbr="631.42" ybr="44.25" z_order="0">
+      <attribute name="text">P&lt;NLDDE&lt;MIKA&lt;&lt;NOOR&lt;VERHAGEN&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;</attribute>
+    </box>
+    <box label="text" source="manual" occluded="0" xtl="31.78" ytl="68.67" xbr="630.10" ybr="85.63" z_order="0">
+      <attribute name="text">TBOZS19582NLD3110356M264503360826890&lt;&lt;&lt;&lt;&lt;78</attribute>
+    </box>
+  </image>
+  <image id="31" name="images/31.png" width="700" height="200">
+    <box label="text" source="manual" occluded="0" xtl="31.68" ytl="30.29" xbr="631.42" ybr="44.25" z_order="0">
+      <attribute name="text">P&lt;NLDDE&lt;MARINUS&lt;&lt;FAY&lt;FORTUYN&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;</attribute>
+    </box>
+    <box label="text" source="manual" occluded="0" xtl="31.78" ytl="68.67" xbr="630.40" ybr="85.63" z_order="0">
+      <attribute name="text">BKTEP19672NLD8496497F403623004264028&lt;&lt;&lt;&lt;&lt;33</attribute>
+    </box>
+  </image>
+  <image id="32" name="images/32.png" width="700" height="200">
+    <box label="text" source="manual" occluded="0" xtl="31.68" ytl="30.29" xbr="631.42" ybr="44.25" z_order="0">
+      <attribute name="text">P&lt;NLDDE&lt;WOUT&lt;&lt;ALEX&lt;VANDEWIEL&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;</attribute>
+    </box>
+    <box label="text" source="manual" occluded="0" xtl="31.78" ytl="68.67" xbr="631.00" ybr="85.63" z_order="0">
+      <attribute name="text">MFKCB19902NLD7955623M637822892391668&lt;&lt;&lt;&lt;&lt;10</attribute>
+    </box>
+  </image>
+  <image id="33" name="images/33.png" width="700" height="200">
+    <box label="text" source="manual" occluded="0" xtl="31.68" ytl="30.29" xbr="631.42" ybr="44.25" z_order="0">
+      <attribute name="text">P&lt;NLDDE&lt;FABIAN&lt;&lt;FLEUR&lt;FRANKHUIZEN&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;</attribute>
+    </box>
+    <box label="text" source="manual" occluded="0" xtl="31.78" ytl="68.67" xbr="630.40" ybr="85.63" z_order="0">
+      <attribute name="text">AGNQI19962NLD6278246M647457436008307&lt;&lt;&lt;&lt;&lt;73</attribute>
+    </box>
+  </image>
+  <image id="34" name="images/34.png" width="700" height="200">
+    <box label="text" source="manual" occluded="0" xtl="31.78" ytl="68.67" xbr="629.80" ybr="85.63" z_order="0">
+      <attribute name="text">EVRIR19572NLD4630976M885823263671816&lt;&lt;&lt;&lt;&lt;27</attribute>
+    </box>
+    <box label="text" source="manual" occluded="0" xtl="31.68" ytl="30.29" xbr="631.42" ybr="44.25" z_order="0">
+      <attribute name="text">P&lt;NLDDE&lt;KYANO&lt;&lt;AARON&lt;OPMANS&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;</attribute>
+    </box>
+  </image>
+  <image id="35" name="images/35.png" width="700" height="200">
+    <box label="text" source="manual" occluded="0" xtl="31.68" ytl="30.29" xbr="631.42" ybr="44.25" z_order="0">
+      <attribute name="text">P&lt;NLDDE&lt;FELIX&lt;&lt;MATTHIJS&lt;LANKLE&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;</attribute>
+    </box>
+    <box label="text" source="manual" occluded="0" xtl="31.78" ytl="68.67" xbr="630.60" ybr="85.63" z_order="0">
+      <attribute name="text">HTJTZ19722NLD2128062M128136669384392&lt;&lt;&lt;&lt;&lt;39</attribute>
+    </box>
+  </image>
+  <image id="36" name="images/36.png" width="700" height="200">
+    <box label="text" source="manual" occluded="0" xtl="31.78" ytl="68.67" xbr="630.40" ybr="85.63" z_order="0">
+      <attribute name="text">QNIQR19892NLD5675276F244430545581257&lt;&lt;&lt;&lt;&lt;83</attribute>
+    </box>
+    <box label="text" source="manual" occluded="0" xtl="31.68" ytl="30.29" xbr="631.42" ybr="44.25" z_order="0">
+      <attribute name="text">P&lt;NLDDE&lt;CORNELIS&lt;&lt;JURRE&lt;PRINS&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;</attribute>
+    </box>
+  </image>
+  <image id="37" name="images/37.png" width="700" height="200">
+    <box label="text" source="manual" occluded="0" xtl="31.68" ytl="30.29" xbr="631.42" ybr="44.25" z_order="0">
+      <attribute name="text">P&lt;NLDDE&lt;JOSEPHINE&lt;&lt;NYNKE&lt;VANDERMEULEN&lt;&lt;&lt;&lt;&lt;&lt;</attribute>
+    </box>
+    <box label="text" source="manual" occluded="0" xtl="31.78" ytl="68.67" xbr="630.20" ybr="85.63" z_order="0">
+      <attribute name="text">BQCND19652NLD4793495F476262232258093&lt;&lt;&lt;&lt;&lt;37</attribute>
+    </box>
+  </image>
+  <image id="38" name="images/38.png" width="700" height="200">
+    <box label="text" source="manual" occluded="0" xtl="31.68" ytl="30.29" xbr="631.42" ybr="44.25" z_order="0">
+      <attribute name="text">P&lt;NLDDE&lt;DEWI&lt;&lt;TIJN&lt;DEKKER&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;</attribute>
+    </box>
+    <box label="text" source="manual" occluded="0" xtl="31.78" ytl="68.67" xbr="630.80" ybr="85.63" z_order="0">
+      <attribute name="text">UIGJA19992NLD7719783M837379680223530&lt;&lt;&lt;&lt;&lt;93</attribute>
+    </box>
+  </image>
+  <image id="39" name="images/39.png" width="700" height="200">
+    <box label="text" source="manual" occluded="0" xtl="31.78" ytl="68.67" xbr="627.60" ybr="85.63" z_order="0">
+      <attribute name="text">JEZKQ20002NLD3350282M479605537321267&lt;&lt;&lt;&lt;&lt;71</attribute>
+    </box>
+    <box label="text" source="manual" occluded="0" xtl="31.68" ytl="30.29" xbr="631.42" ybr="44.25" z_order="0">
+      <attribute name="text">P&lt;NLDDE&lt;RILEY&lt;&lt;GUUSJE&lt;LIPS&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;</attribute>
+    </box>
+  </image>
+</annotations>
+
