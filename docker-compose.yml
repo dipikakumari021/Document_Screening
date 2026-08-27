@@ -1,0 +1,15 @@
+services:
+  ai-service:
+    build: ./ai-service
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+
+# The Next.js app (this repo's root) isn't containerized here — run it directly
+# with `npm run dev` (or deploy it to Vercel as usual) and point it at this
+# service with AI_SERVICE_URL=http://localhost:8000 in .env.local.
+#
+# To run just the OCR service:
+#   docker compose up ai-service
+#
+# See ai-service/README.md for what it does and how it was tested/benchmarked.
