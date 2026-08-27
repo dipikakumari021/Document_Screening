@@ -2,26 +2,56 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Shield, Lock, User, Eye, EyeOff, AlertTriangle, BadgeCheck, CheckCircle2, UserPlus } from "lucide-react";
+import { Shield, Lock, User, Eye, EyeOff, AlertTriangle, CheckCircle2, UserCheck, ShieldAlert, Award } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 
+const PRESET_OFFICERS = [
+  {
+    role: "Immigration Inspector",
+    name: "Inspector Arjun Singh",
+    email: "arjun.singh@pramaan.gov.in",
+    password: "password123",
+    icon: UserCheck,
+    badgeColor: "bg-blue-50 text-blue-700 border-blue-200",
+  },
+  {
+    role: "Border Security Officer",
+    name: "Officer Priya Sharma",
+    email: "priya.sharma@pramaan.gov.in",
+    password: "password123",
+    icon: Shield,
+    badgeColor: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  },
+  {
+    role: "Checkpoint Supervisor",
+    name: "Supervisor Vikram Rao",
+    email: "vikram.rao@pramaan.gov.in",
+    password: "password123",
+    icon: Award,
+    badgeColor: "bg-purple-50 text-purple-700 border-purple-200",
+  },
+];
+
 export default function LoginPage() {
   const router = useRouter();
-  const [mode, setMode] = useState<"login" | "register">("login");
   const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   // Form states
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [role, setRole] = useState("Border Security Officer");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
+  const [email, setEmail] = useState("arjun.singh@pramaan.gov.in");
+  const [password, setPassword] = useState("password123");
+  const [selectedRole, setSelectedRole] = useState("Immigration Inspector");
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
+
+  const handleSelectOfficer = (officer: typeof PRESET_OFFICERS[0]) => {
+    setEmail(officer.email);
+    setPassword(officer.password);
+    setSelectedRole(officer.role);
+    setError("");
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,60 +59,32 @@ export default function LoginPage() {
     setError("");
     setSuccessMsg("");
 
-    if (mode === "register") {
-      if (password !== confirmPassword) {
-        setError("Passwords do not match.");
-        setLoading(false);
-        return;
-      }
+    try {
+      const res = await fetch("/api/auth", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
 
-      try {
-        const res = await fetch("/api/auth/register", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name, email, password, role }),
-        });
-
-        const data = await res.json();
-        if (res.ok && data.success) {
-          setSuccessMsg("Account registered successfully! Redirecting...");
-          setTimeout(() => {
-            router.push("/dashboard");
-          }, 800);
-        } else {
-          setError(data.message || "Registration failed. Please try again.");
-        }
-      } catch (err) {
-        setError("An unexpected network error occurred.");
-      } finally {
-        setLoading(false);
-      }
-    } else {
-      // Sign In mode
-      try {
-        const res = await fetch("/api/auth", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email, password }),
-        });
-
-        const data = await res.json();
-        if (res.ok && data.success) {
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setSuccessMsg(`Welcome, ${data.user?.name || "Officer"}. Redirecting to console...`);
+        setTimeout(() => {
           router.push("/dashboard");
-        } else {
-          setError(data.message || "Invalid credentials. Please verify your ID & password.");
-        }
-      } catch (err) {
-        setError("An error occurred during authentication. Please try again.");
-      } finally {
-        setLoading(false);
+        }, 500);
+      } else {
+        setError(data.message || "Invalid credentials. Please verify your Officer ID & password.");
       }
+    } catch (err) {
+      setError("An error occurred during authentication. Please try again.");
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
     <div className="min-h-screen flex bg-slate-50 font-sans">
-      {/* Left Pane - Dark Mode Animation/Graphic */}
+      {/* Left Pane - Dark Mode Verification Graphic */}
       <div className="hidden lg:flex lg:w-1/2 bg-[#0A1128] text-white flex-col relative overflow-hidden p-12 justify-between">
         {/* Background Gradients */}
         <div className="absolute top-0 left-0 w-full h-full pointer-events-none">
@@ -166,116 +168,77 @@ export default function LoginPage() {
       <div className="w-full lg:w-1/2 flex flex-col justify-center items-center p-6 md:p-12 bg-slate-50 overflow-y-auto">
         <div className="w-full max-w-md bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden my-auto">
           {/* Header */}
-          <div className="p-6 md:p-8 text-center pb-4">
-            <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-blue-50 text-blue-600 mb-4 shadow-sm">
-              {mode === "login" ? <Shield className="w-7 h-7" /> : <UserPlus className="w-7 h-7" />}
+          <div className="p-6 md:p-8 text-center pb-3">
+            <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-blue-50 text-blue-600 mb-3 shadow-sm border border-blue-100">
+              <Shield className="w-7 h-7" />
             </div>
             <h1 className="text-2xl font-bold text-slate-900 mb-1">
-              {mode === "login" ? "Officer Sign In" : "Register Officer"}
+              Officer Portal Sign In
             </h1>
-            <p className="text-xs md:text-sm text-slate-500">
-              {mode === "login"
-                ? "Access the PRAMAAN AI screening console."
-                : "Create authorized credentials for document screening."}
+            <p className="text-xs text-slate-500 max-w-xs mx-auto">
+              Select an authorized officer profile below or sign in with your official ID.
             </p>
+          </div>
 
-            {/* Toggle Switcher */}
-            <div className="flex bg-slate-100 p-1 rounded-xl mt-6 border border-slate-200">
-              <button
-                type="button"
-                onClick={() => {
-                  setMode("login");
-                  setError("");
-                  setSuccessMsg("");
-                }}
-                className={`flex-1 py-2 text-xs md:text-sm font-semibold rounded-lg transition-all ${
-                  mode === "login"
-                    ? "bg-white text-blue-600 shadow-sm"
-                    : "text-slate-600 hover:text-slate-900"
-                }`}
-              >
-                Sign In
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setMode("register");
-                  setError("");
-                  setSuccessMsg("");
-                }}
-                className={`flex-1 py-2 text-xs md:text-sm font-semibold rounded-lg transition-all ${
-                  mode === "register"
-                    ? "bg-white text-blue-600 shadow-sm"
-                    : "text-slate-600 hover:text-slate-900"
-                }`}
-              >
-                Register Officer
-              </button>
+          {/* Quick Role Selector for Demo */}
+          <div className="px-6 md:px-8 pb-3">
+            <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wider block mb-2">
+              Select Officer Role (Demo Profiles)
+            </label>
+            <div className="grid grid-cols-3 gap-2">
+              {PRESET_OFFICERS.map((off) => {
+                const isSelected = email === off.email;
+                const IconComponent = off.icon;
+                return (
+                  <button
+                    key={off.role}
+                    type="button"
+                    onClick={() => handleSelectOfficer(off)}
+                    className={`flex flex-col items-center justify-center p-2.5 rounded-xl border text-center transition-all ${
+                      isSelected
+                        ? "bg-blue-50/90 border-blue-500 shadow-sm ring-1 ring-blue-500"
+                        : "bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-700"
+                    }`}
+                  >
+                    <IconComponent
+                      className={`w-4 h-4 mb-1.5 ${
+                        isSelected ? "text-blue-600" : "text-slate-500"
+                      }`}
+                    />
+                    <span
+                      className={`text-[11px] font-bold leading-tight ${
+                        isSelected ? "text-blue-900" : "text-slate-800"
+                      }`}
+                    >
+                      {off.role.replace(" Officer", "")}
+                    </span>
+
+                  </button>
+                );
+              })}
             </div>
           </div>
 
           {/* Form */}
           <div className="px-6 md:px-8 pb-8">
             <form onSubmit={handleSubmit} className="space-y-4 text-left">
-              {/* Full Name for Register Mode */}
-              {mode === "register" && (
-                <div className="space-y-1.5 animate-in fade-in duration-300">
-                  <label className="text-xs font-semibold text-slate-700 uppercase tracking-wider">
-                    Full Name
-                  </label>
-                  <div className="relative">
-                    <User className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
-                    <Input
-                      type="text"
-                      placeholder="e.g. Officer Vikram Sharma"
-                      className="pl-9 h-11 bg-slate-50 border-slate-200 text-slate-900 font-medium placeholder:text-slate-400 focus-visible:ring-blue-500 focus-visible:bg-white"
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      required={mode === "register"}
-                    />
-                  </div>
-                </div>
-              )}
-
               {/* Officer ID / Email */}
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold text-slate-700 uppercase tracking-wider">
-                  {mode === "login" ? "Officer ID / Email" : "Official Email / Officer ID"}
+                  Officer ID / Official Email
                 </label>
                 <div className="relative">
                   <User className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
                   <Input
                     type="text"
-                    placeholder="Enter officer ID or email"
-                    className="pl-9 h-11 bg-slate-50 border-slate-200 text-slate-900 font-medium placeholder:text-slate-400 focus-visible:ring-blue-500 focus-visible:bg-white"
+                    placeholder="e.g. arjun.singh@pramaan.gov.in"
+                    className="pl-9 h-11 bg-slate-50 border-slate-200 text-slate-900 font-medium placeholder:text-slate-400 focus-visible:ring-blue-500 focus-visible:bg-white text-xs"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
                   />
                 </div>
               </div>
-
-              {/* Role / Designation for Register Mode */}
-              {mode === "register" && (
-                <div className="space-y-1.5 animate-in fade-in duration-300">
-                  <label className="text-xs font-semibold text-slate-700 uppercase tracking-wider">
-                    Designation / Department
-                  </label>
-                  <div className="relative">
-                    <BadgeCheck className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
-                    <select
-                      value={role}
-                      onChange={(e) => setRole(e.target.value)}
-                      className="w-full pl-9 pr-4 h-11 bg-slate-50 border border-slate-200 rounded-md text-slate-900 font-medium text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
-                    >
-                      <option value="Border Security Officer">Border Security Officer</option>
-                      <option value="Document Verification Specialist">Document Verification Specialist</option>
-                      <option value="Immigration Inspector">Immigration Inspector</option>
-                      <option value="Checkpoint Supervisor">Checkpoint Supervisor</option>
-                    </select>
-                  </div>
-                </div>
-              )}
 
               {/* Password */}
               <div className="space-y-1.5">
@@ -286,12 +249,11 @@ export default function LoginPage() {
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
                   <Input
                     type={showPassword ? "text" : "password"}
-                    placeholder="Enter secure password"
-                    className="pl-9 pr-10 h-11 bg-slate-50 border-slate-200 text-slate-900 font-medium placeholder:text-slate-400 focus-visible:ring-blue-500 focus-visible:bg-white"
+                    placeholder="Enter official password"
+                    className="pl-9 pr-10 h-11 bg-slate-50 border-slate-200 text-slate-900 font-medium placeholder:text-slate-400 focus-visible:ring-blue-500 focus-visible:bg-white text-xs"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
-                    minLength={6}
                   />
                   <button
                     type="button"
@@ -303,48 +265,17 @@ export default function LoginPage() {
                 </div>
               </div>
 
-              {/* Confirm Password for Register Mode */}
-              {mode === "register" && (
-                <div className="space-y-1.5 animate-in fade-in duration-300">
-                  <label className="text-xs font-semibold text-slate-700 uppercase tracking-wider">
-                    Confirm Password
-                  </label>
-                  <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
-                    <Input
-                      type={showConfirmPassword ? "text" : "password"}
-                      placeholder="Re-enter password"
-                      className="pl-9 pr-10 h-11 bg-slate-50 border-slate-200 text-slate-900 font-medium placeholder:text-slate-400 focus-visible:ring-blue-500 focus-visible:bg-white"
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      required={mode === "register"}
-                      minLength={6}
-                    />
-                    <button
-                      type="button"
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-none"
-                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    >
-                      {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {mode === "login" && (
-                <div className="flex items-center justify-between text-xs pt-1">
-                  <label className="flex items-center gap-2 text-slate-600 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      id="remember"
-                      defaultChecked
-                      className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                    />
-                    <span>Remember this device</span>
-                  </label>
-                  <span className="text-blue-600 hover:underline cursor-pointer">Forgot ID?</span>
-                </div>
-              )}
+              <div className="flex items-center justify-between text-xs pt-1">
+                <label className="flex items-center gap-2 text-slate-600 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    id="remember"
+                    defaultChecked
+                    className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  <span>Remember session on this device</span>
+                </label>
+              </div>
 
               {/* Error Message */}
               {error && (
@@ -367,48 +298,9 @@ export default function LoginPage() {
                 className="w-full h-11 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm rounded-lg shadow-md shadow-blue-500/20 transition-all mt-2"
                 disabled={loading}
               >
-                {loading
-                  ? mode === "login"
-                    ? "Authenticating..."
-                    : "Registering Officer..."
-                  : mode === "login"
-                  ? "Sign In →"
-                  : "Complete Registration →"}
+                {loading ? "Authenticating Officer..." : "Sign In to Console →"}
               </Button>
             </form>
-
-            {/* Switch Mode Prompt */}
-            <div className="mt-6 text-center text-xs text-slate-500">
-              {mode === "login" ? (
-                <p>
-                  Need new officer credentials?{" "}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setMode("register");
-                      setError("");
-                    }}
-                    className="text-blue-600 font-semibold hover:underline"
-                  >
-                    Register here
-                  </button>
-                </p>
-              ) : (
-                <p>
-                  Already have an authorized account?{" "}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setMode("login");
-                      setError("");
-                    }}
-                    className="text-blue-600 font-semibold hover:underline"
-                  >
-                    Sign In
-                  </button>
-                </p>
-              )}
-            </div>
           </div>
 
           {/* Footer Security Badges */}
@@ -421,11 +313,9 @@ export default function LoginPage() {
             </span>
           </div>
         </div>
-
-        <p className="mt-6 text-xs text-slate-400 text-center">
-          Authorized personnel only. (Quick demo login: <code className="bg-slate-200 text-slate-700 px-1.5 py-0.5 rounded">demo@example.com</code> / <code className="bg-slate-200 text-slate-700 px-1.5 py-0.5 rounded">password123</code>)
-        </p>
       </div>
     </div>
   );
 }
+
+

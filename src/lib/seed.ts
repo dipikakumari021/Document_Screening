@@ -1,8 +1,51 @@
 import { connectDB } from "./db";
 import { Screening } from "@/models/Screening";
+import { User } from "@/models/User";
+import bcrypt from "bcryptjs";
+
+export async function ensureOfficersSeeded() {
+  await connectDB();
+  const defaultPasswordHash = await bcrypt.hash("password123", 10);
+
+  const officers = [
+    {
+      email: "arjun.singh@pramaan.gov.in",
+      password: defaultPasswordHash,
+      name: "Inspector Arjun Singh",
+      role: "Immigration Inspector",
+    },
+    {
+      email: "priya.sharma@pramaan.gov.in",
+      password: defaultPasswordHash,
+      name: "Officer Priya Sharma",
+      role: "Border Security Officer",
+    },
+    {
+      email: "vikram.rao@pramaan.gov.in",
+      password: defaultPasswordHash,
+      name: "Supervisor Vikram Rao",
+      role: "Checkpoint Supervisor",
+    },
+    {
+      email: "demo@example.com",
+      password: defaultPasswordHash,
+      name: "Officer Arjun Singh",
+      role: "Border Security Officer",
+    },
+  ];
+
+  for (const officer of officers) {
+    await User.findOneAndUpdate(
+      { email: officer.email },
+      { $set: { name: officer.name, role: officer.role, password: officer.password } },
+      { upsert: true, new: true, setDefaultsOnInsert: true }
+    );
+  }
+}
 
 export async function ensureDatabaseSeeded(officerName: string = "Arjun Singh") {
   await connectDB();
+  await ensureOfficersSeeded();
   const count = await Screening.countDocuments();
   if (count >= 8) return;
 

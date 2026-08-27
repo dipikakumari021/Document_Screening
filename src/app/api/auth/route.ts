@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import { User } from "@/models/User";
 import { encrypt } from "@/lib/auth";
+import { ensureOfficersSeeded } from "@/lib/seed";
 import bcrypt from "bcryptjs";
 import { cookies } from "next/headers";
 
@@ -11,29 +12,20 @@ export async function POST(request: Request) {
     const { email, password } = body;
 
     // Simulate network delay
-    await new Promise((resolve) => setTimeout(resolve, 800));
+    await new Promise((resolve) => setTimeout(resolve, 600));
 
     if (!email || !password) {
       return NextResponse.json(
-        { success: false, message: "Missing credentials" },
+        { success: false, message: "Please enter your Officer ID/Email and Password." },
         { status: 400 }
       );
     }
 
     await connectDB();
+    await ensureOfficersSeeded();
 
-    let user = await User.findOne({ email });
-
-    // Auto-provisioning for demo purposes
-    if (!user && password === "password123") {
-      const hashedPassword = await bcrypt.hash(password, 10);
-      user = await User.create({
-        email,
-        password: hashedPassword,
-        name: "Arjun Singh (Demo)",
-        role: "OFFICER",
-      });
-    }
+    const normalizedIdentifier = email.trim().toLowerCase();
+    let user = await User.findOne({ email: normalizedIdentifier });
 
     if (!user) {
       return NextResponse.json(

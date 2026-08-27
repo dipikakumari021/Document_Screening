@@ -129,11 +129,13 @@ export default function DashboardLayout({
                 {getInitials(officer?.name)}
               </div>
               <div className="hidden md:block text-left">
-                <div className="text-sm font-semibold text-slate-900 leading-tight">
-                  {officer?.name || "Loading..."}
+                <div className="text-sm font-bold text-slate-900 leading-tight">
+                  {officer?.name || "Authorized Officer"}
                 </div>
-                <div className="text-[11px] text-slate-500 font-medium capitalize">
-                  {officer?.role?.toLowerCase() || "Officer"}
+                <div className="flex items-center gap-1.5 mt-0.5">
+                  <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold bg-blue-50 text-blue-700 border border-blue-200">
+                    {officer?.role || "Immigration Inspector"}
+                  </span>
                 </div>
               </div>
             </div>
