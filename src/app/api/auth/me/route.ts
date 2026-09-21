@@ -18,27 +18,29 @@ export async function GET() {
       return NextResponse.json({ user: null }, { status: 401 });
     }
 
-    await connectDB();
-
-    // Fetch latest user details from MongoDB
-    const user = await User.findById(payload.userId).select("name email role").lean();
-
-    if (!user) {
-      return NextResponse.json({
-        user: {
-          id: payload.userId,
-          name: payload.name || "Officer",
-          role: payload.role || "OFFICER",
-        },
-      });
+    // Fetch latest user details from MongoDB if available
+    try {
+      await connectDB();
+      const user = await User.findById(payload.userId).select("name email role").lean();
+      if (user) {
+        return NextResponse.json({
+          user: {
+            id: (user as any)._id ? (user as any)._id.toString() : payload.userId,
+            name: (user as any).name,
+            email: (user as any).email,
+            role: (user as any).role,
+          },
+        });
+      }
+    } catch (dbErr) {
+      console.warn("DB lookup skipped in auth/me, using token payload:", dbErr);
     }
 
     return NextResponse.json({
       user: {
-        id: (user as any)._id ? (user as any)._id.toString() : payload.userId,
-        name: (user as any).name,
-        email: (user as any).email,
-        role: (user as any).role,
+        id: payload.userId,
+        name: payload.name || "Officer",
+        role: payload.role || "OFFICER",
       },
     });
   } catch (error) {

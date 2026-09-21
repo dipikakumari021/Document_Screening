@@ -3,9 +3,13 @@ import { Screening } from "@/models/Screening";
 import { User } from "@/models/User";
 import bcrypt from "bcryptjs";
 
+let officersSeeded = false;
+
 export async function ensureOfficersSeeded() {
-  await connectDB();
-  const defaultPasswordHash = await bcrypt.hash("password123", 10);
+  if (officersSeeded) return;
+  try {
+    await connectDB();
+    const defaultPasswordHash = await bcrypt.hash("password123", 10);
 
   const officers = [
     {
@@ -40,6 +44,10 @@ export async function ensureOfficersSeeded() {
       { $set: { name: officer.name, role: officer.role, password: officer.password } },
       { upsert: true, new: true, setDefaultsOnInsert: true }
     );
+  }
+    officersSeeded = true;
+  } catch (error) {
+    console.warn("Could not seed preset officers to MongoDB:", error);
   }
 }
 

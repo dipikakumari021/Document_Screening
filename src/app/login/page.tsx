@@ -70,14 +70,15 @@ export default function LoginPage() {
       if (res.ok && data.success) {
         setSuccessMsg(`Welcome, ${data.user?.name || "Officer"}. Redirecting to console...`);
         setTimeout(() => {
-          router.push("/dashboard");
-        }, 500);
+          window.location.href = "/dashboard";
+        }, 300);
       } else {
         setError(data.message || "Invalid credentials. Please verify your Officer ID & password.");
+        setLoading(false);
       }
-    } catch (err) {
+    } catch (err: any) {
+      console.error("Login error:", err);
       setError("An error occurred during authentication. Please try again.");
-    } finally {
       setLoading(false);
     }
   };
@@ -294,11 +295,19 @@ export default function LoginPage() {
               )}
 
               <Button
+                id="btn-sign-in-console"
                 type="submit"
-                className="w-full h-11 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm rounded-lg shadow-md shadow-blue-500/20 transition-all mt-2"
+                className="w-full h-11 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm rounded-lg shadow-md shadow-blue-500/20 transition-all mt-2 cursor-pointer active:scale-[0.99] disabled:opacity-75"
                 disabled={loading}
               >
-                {loading ? "Authenticating Officer..." : "Sign In to Console →"}
+                {loading ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                    Authenticating Officer...
+                  </span>
+                ) : (
+                  "Sign In to Console →"
+                )}
               </Button>
             </form>
           </div>
