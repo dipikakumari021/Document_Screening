@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Upload, FileText, CheckCircle, Search, UserCheck, AlertTriangle, FileImage } from "lucide-react";
 import { Button } from "@/components/ui/Button";
@@ -13,6 +13,9 @@ export default function NewScreeningPage() {
   const [step, setStep] = useState<Step>("UPLOAD");
   const [processingStage, setProcessingStage] = useState(0);
   const [result, setResult] = useState<any>(null);
+  const [documentFile, setDocumentFile] = useState<File | null>(null);
+  const [ocrError, setOcrError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const stages = [
     { name: "OCR & Data Extraction", icon: FileText, desc: "Reading text and MRZ codes..." },
@@ -21,10 +24,22 @@ export default function NewScreeningPage() {
     { name: "Face Verification", icon: UserCheck, desc: "Comparing document photo with live face..." },
   ];
 
-  const handleSimulateUpload = () => {
+  const handleFileSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] ?? null;
+    setOcrError(null);
+    setDocumentFile(file);
+  };
+
+  const handleStartScreening = () => {
     setStep("PROCESSING");
-    
-    // Simulate progression through stages
+
+    // Kick off the real OCR call (if a document was uploaded) in parallel
+    // with the visual stage animation below, so the UI isn't just blocked
+    // on the network call — whichever finishes last decides when we move on.
+    const ocrPromise: Promise<any | null> = documentFile
+      ? runOcr(documentFile)
+      : Promise.resolve(null);
+
     let currentStage = 0;
     const interval = setInterval(() => {
       currentStage++;
@@ -32,17 +47,45 @@ export default function NewScreeningPage() {
         setProcessingStage(currentStage);
       } else {
         clearInterval(interval);
-        submitScreening();
+        ocrPromise.then((ocrResult) => submitScreening(ocrResult));
       }
     }, 1200); // 1.2 seconds per stage
   };
 
-  const submitScreening = async () => {
+  const runOcr = async (file: File) => {
+    try {
+      const formData = new FormData();
+      formData.append("passportImage", file);
+      const res = await fetch("/api/ocr", { method: "POST", body: formData });
+      const data = await res.json();
+      if (!data.success) {
+        setOcrError(data.error || "OCR failed to read the document");
+        return null;
+      }
+      return data.ocr;
+    } catch (error) {
+      console.error("OCR call failed:", error);
+      setOcrError(
+        "Could not reach the OCR service — is it running? (see ai-service/README.md)"
+      );
+      return null;
+    }
+  };
+
+  const submitScreening = async (ocrResult: any | null) => {
     try {
       const res = await fetch("/api/screenings", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ documentType: "Passport", name: "Rajesh Kumar" }),
+        body: JSON.stringify(
+          ocrResult
+            ? {
+                documentType: "Passport",
+                name: ocrResult.name || "Unknown",
+                ocr: ocrResult,
+              }
+            : { documentType: "Passport", name: "Rajesh Kumar" }
+        ),
       });
       const data = await res.json();
       setResult(data);
@@ -58,6 +101,16 @@ export default function NewScreeningPage() {
       setStep("RESULT");
     }
   };
+
+  const parsedOcrData = result?.ocrData
+    ? (() => {
+        try {
+          return JSON.parse(result.ocrData);
+        } catch {
+          return null;
+        }
+      })()
+    : null;
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
@@ -77,20 +130,32 @@ export default function NewScreeningPage() {
              Step {step === 'UPLOAD' ? 1 : step === 'PROCESSING' ? 2 : 3} of 3
            </span>
         </div>
-        
+
         <CardContent className="flex-1 p-8 flex flex-col justify-center items-center">
-          
+
           {step === "UPLOAD" && (
             <div className="w-full max-w-xl text-center space-y-8 animate-in fade-in zoom-in duration-500">
               <div className="grid grid-cols-2 gap-6">
-                 <div className="border-2 border-dashed border-slate-300 rounded-xl p-8 flex flex-col items-center justify-center hover:bg-slate-50 hover:border-blue-400 transition-colors cursor-pointer group">
+                 <div
+                   onClick={() => fileInputRef.current?.click()}
+                   className="border-2 border-dashed border-slate-300 rounded-xl p-8 flex flex-col items-center justify-center hover:bg-slate-50 hover:border-blue-400 transition-colors cursor-pointer group"
+                 >
+                   <input
+                     ref={fileInputRef}
+                     type="file"
+                     accept="image/*"
+                     className="hidden"
+                     onChange={handleFileSelected}
+                   />
                    <div className="w-16 h-16 bg-blue-50 text-blue-500 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                      <FileImage className="w-8 h-8" />
                    </div>
                    <h3 className="font-semibold text-slate-800">Travel Document</h3>
-                   <p className="text-xs text-slate-500 mt-1">Upload Passport or ID</p>
+                   <p className="text-xs text-slate-500 mt-1">
+                     {documentFile ? documentFile.name : "Upload Passport or ID"}
+                   </p>
                  </div>
-                 
+
                  <div className="border-2 border-dashed border-slate-300 rounded-xl p-8 flex flex-col items-center justify-center hover:bg-slate-50 hover:border-blue-400 transition-colors cursor-pointer group">
                    <div className="w-16 h-16 bg-emerald-50 text-emerald-500 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                      <UserCheck className="w-8 h-8" />
@@ -99,8 +164,16 @@ export default function NewScreeningPage() {
                    <p className="text-xs text-slate-500 mt-1">Capture or upload face</p>
                  </div>
               </div>
-              
-              <Button size="lg" onClick={handleSimulateUpload} className="w-full max-w-sm h-12 bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-500/20">
+
+              {ocrError && <p className="text-sm text-red-600">{ocrError}</p>}
+
+              <p className="text-xs text-slate-400">
+                {documentFile
+                  ? "Your document will be read by the real OCR/MRZ model."
+                  : "No document selected — screening will run with placeholder demo data."}
+              </p>
+
+              <Button size="lg" onClick={handleStartScreening} className="w-full max-w-sm h-12 bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-500/20">
                 Start Screening Process
               </Button>
             </div>
@@ -112,13 +185,13 @@ export default function NewScreeningPage() {
                 <h3 className="text-2xl font-bold text-slate-800">AI Analysis in Progress</h3>
                 <p className="text-slate-500">Please wait while PRAMAAN AI verifies the documents.</p>
               </div>
-              
+
               <div className="space-y-4">
                 {stages.map((stage, i) => {
                   const isActive = i === processingStage;
                   const isDone = i < processingStage;
                   const Icon = stage.icon;
-                  
+
                   return (
                     <div key={i} className={`flex items-center gap-4 p-4 rounded-xl border transition-all duration-300 ${isActive ? 'bg-blue-50 border-blue-200 shadow-sm scale-[1.02]' : isDone ? 'bg-white border-emerald-100 opacity-60' : 'bg-slate-50 border-slate-100 opacity-40'}`}>
                       <div className={`w-10 h-10 rounded-full flex items-center justify-center ${isActive ? 'bg-blue-600 text-white animate-pulse' : isDone ? 'bg-emerald-500 text-white' : 'bg-slate-200 text-slate-400'}`}>
@@ -139,8 +212,8 @@ export default function NewScreeningPage() {
             <div className="w-full max-w-2xl animate-in slide-in-from-bottom-8 duration-700">
               <div className="text-center mb-8">
                 <div className={`inline-flex items-center justify-center w-20 h-20 rounded-full mb-4 shadow-xl ${
-                  result.riskLevel === 'LOW' ? 'bg-emerald-100 text-emerald-600 shadow-emerald-500/20' : 
-                  result.riskLevel === 'HIGH' ? 'bg-red-100 text-red-600 shadow-red-500/20' : 
+                  result.riskLevel === 'LOW' ? 'bg-emerald-100 text-emerald-600 shadow-emerald-500/20' :
+                  result.riskLevel === 'HIGH' ? 'bg-red-100 text-red-600 shadow-red-500/20' :
                   'bg-amber-100 text-amber-600 shadow-amber-500/20'
                 }`}>
                   {result.riskLevel === 'LOW' ? <CheckCircle className="w-10 h-10" /> : <AlertTriangle className="w-10 h-10" />}
@@ -151,8 +224,8 @@ export default function NewScreeningPage() {
 
               <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
                 <div className={`p-6 text-center border-b ${
-                  result.riskLevel === 'LOW' ? 'bg-emerald-50 border-emerald-100' : 
-                  result.riskLevel === 'HIGH' ? 'bg-red-50 border-red-100' : 
+                  result.riskLevel === 'LOW' ? 'bg-emerald-50 border-emerald-100' :
+                  result.riskLevel === 'HIGH' ? 'bg-red-50 border-red-100' :
                   'bg-amber-50 border-amber-100'
                 }`}>
                   <div className="text-sm font-semibold uppercase tracking-wider mb-1 opacity-70">Calculated Risk Score</div>
@@ -161,7 +234,7 @@ export default function NewScreeningPage() {
                     {result.status === 'CLEARED' ? 'Verification Passed - Allow Entry' : 'Manual Review Recommended'}
                   </div>
                 </div>
-                
+
                 <div className="p-6 grid sm:grid-cols-2 gap-6">
                    <div>
                      <h4 className="text-xs font-semibold text-slate-400 uppercase mb-3">Extracted Data</h4>
@@ -177,15 +250,19 @@ export default function NewScreeningPage() {
                      <h4 className="text-xs font-semibold text-slate-400 uppercase mb-3">AI Verification</h4>
                      <ul className="space-y-3 text-sm">
                        <li className="flex justify-between items-center border-b border-slate-100 pb-2">
-                         <span className="text-slate-500">MRZ Valid:</span> 
-                         <CheckCircle className="w-4 h-4 text-emerald-500" />
+                         <span className="text-slate-500">MRZ Valid:</span>
+                         {parsedOcrData?.mrzValid === false ? (
+                           <AlertTriangle className="w-4 h-4 text-red-500" />
+                         ) : (
+                           <CheckCircle className="w-4 h-4 text-emerald-500" />
+                         )}
                        </li>
                        <li className="flex justify-between items-center border-b border-slate-100 pb-2">
-                         <span className="text-slate-500">Face Match:</span> 
+                         <span className="text-slate-500">Face Match:</span>
                          <span className={`font-bold ${result.faceMatchScore < 60 ? 'text-red-500' : 'text-emerald-500'}`}>{result.faceMatchScore}%</span>
                        </li>
                        <li className="flex justify-between items-center border-b border-slate-100 pb-2">
-                         <span className="text-slate-500">Tampering Check:</span> 
+                         <span className="text-slate-500">Tampering Check:</span>
                          {result.riskLevel === 'HIGH' ? <AlertTriangle className="w-4 h-4 text-red-500" /> : <CheckCircle className="w-4 h-4 text-emerald-500" />}
                        </li>
                      </ul>
