@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PRAMAAN AI — Tech Stack</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: #f0f2f5;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 20px;
+    }
+
+    /* ── Title ── */
+    .title-wrap {
+      background: #dde3ef;
+      border: 3px solid #9aaac8;
+      border-radius: 50px;
+      padding: 12px 48px;
+      margin-bottom: 60px;
+      box-shadow: 2px 4px 0 #9aaac8;
+    }
+    .title-wrap h1 {
+      font-size: 2rem;
+      font-weight: 800;
+      color: #1a2340;
+      letter-spacing: 1px;
+    }
+
+    /* ── Chain Container ── */
+    .chain-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-wrap: nowrap;
+      gap: 0;
+      position: relative;
+    }
+
+    /* ── Single Chain Item ── */
+    .chain-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      position: relative;
+      width: 160px;
+    }
+
+    .chain-item:nth-child(even) {
+      margin-top: 100px;
+    }
+
+    /* Label above link */
+    .label-top {
+      text-align: center;
+      margin-bottom: 10px;
+      min-height: 80px;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+    }
+    .label-top .tech-name {
+      font-size: 1rem;
+      font-weight: 700;
+    }
+    .label-top .tech-desc {
+      font-size: 0.68rem;
+      color: #444;
+      line-height: 1.3;
+      margin-top: 4px;
+      max-width: 130px;
+    }
+
+    /* Label below link */
+    .label-bottom {
+      text-align: center;
+      margin-top: 10px;
+      min-height: 80px;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+    }
+    .label-bottom .tech-name {
+      font-size: 1rem;
+      font-weight: 700;
+    }
+    .label-bottom .tech-desc {
+      font-size: 0.68rem;
+      color: #444;
+      line-height: 1.3;
+      margin-top: 4px;
+      max-width: 130px;
+    }
+
+    /* ── Chain Link Shape ── */
+    .link-wrap {
+      position: relative;
+      width: 130px;
+      height: 80px;
+    }
+
+    /* Outer ring */
+    .chain-link {
+      width: 130px;
+      height: 80px;
+      border-radius: 40px;
+      border: 10px solid;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      z-index: 2;
+      background: #f0f2f5;
+    }
+
+    /* Icon inside link */
+    .chain-link svg {
+      width: 36px;
+      height: 36px;
+    }
+
+    /* Overlap connector — left half of next link goes behind right half of current */
+    .chain-item:not(:first-child) .link-wrap::before {
+      content: '';
+      position: absolute;
+      left: -30px;
+      top: 10px;
+      width: 30px;
+      height: 60px;
+      border-radius: 30px 0 0 30px;
+      border-width: 10px;
+      border-style: solid;
+      border-right: none;
+      z-index: 1;
+    }
+
+    /* ── Individual colours ── */
+    /* 1 Next.js — blue */
+    .item-1 .chain-link        { border-color: #2563eb; }
+    .item-1 .tech-name         { color: #2563eb; }
+    .item-1 .link-wrap::before { border-color: #2563eb; }
+
+    /* 2 FastAPI — green */
+    .item-2 .chain-link        { border-color: #16a34a; }
+    .item-2 .tech-name         { color: #16a34a; }
+    .item-2 .link-wrap::before { border-color: #16a34a; }
+
+    /* 3 TypeScript — dark blue */
+    .item-3 .chain-link        { border-color: #1e3a8a; }
+    .item-3 .tech-name         { color: #1e3a8a; }
+    .item-3 .link-wrap::before { border-color: #1e3a8a; }
+
+    /* 4 Tesseract OCR — amber */
+    .item-4 .chain-link        { border-color: #d97706; }
+    .item-4 .tech-name         { color: #d97706; }
+    .item-4 .link-wrap::before { border-color: #d97706; }
+
+    /* 5 Tailwind CSS — cyan */
+    .item-5 .chain-link        { border-color: #0891b2; }
+    .item-5 .tech-name         { color: #0891b2; }
+    .item-5 .link-wrap::before { border-color: #0891b2; }
+
+    /* 6 MongoDB — dark green */
+    .item-6 .chain-link        { border-color: #15803d; }
+    .item-6 .tech-name         { color: #15803d; }
+    .item-6 .link-wrap::before { border-color: #15803d; }
+
+    /* 7 JWT / Auth — purple */
+    .item-7 .chain-link        { border-color: #7c3aed; }
+    .item-7 .tech-name         { color: #7c3aed; }
+    .item-7 .link-wrap::before { border-color: #7c3aed; }
+
+    /* 8 Docker — sky blue */
+    .item-8 .chain-link        { border-color: #0284c7; }
+    .item-8 .tech-name         { color: #0284c7; }
+    .item-8 .link-wrap::before { border-color: #0284c7; }
+  </style>
+</head>
+<body>
+
+  <div class="title-wrap">
+    <h1>Tech Stack Used</h1>
+  </div>
+
+  <div class="chain-row">
+
+    <!-- 1: Next.js -->
+    <div class="chain-item item-1">
+      <div class="label-top">
+        <span class="tech-name">Next.js 16</span>
+        <span class="tech-desc">React framework for full-stack web apps with App Router</span>
+      </div>
+      <div class="link-wrap">
+        <div class="chain-link">
+          <!-- Next.js icon (triangle logo) -->
+          <svg viewBox="0 0 128 128" fill="none">
+            <path d="M64 0C28.65 0 0 28.65 0 64s28.65 64 64 64 64-28.65 64-64S99.35 0 64 0z" fill="#2563eb" opacity=".15"/>
+            <path d="M106.3 112.6L49.2 36H36v56h10.7V49.1l52.6 68.8c2.5-1.7 4.9-3.6 7-5.3z" fill="#2563eb"/>
+            <path d="M82 36h11v56H82z" fill="#2563eb"/>
+          </svg>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2: FastAPI (even → drops down) -->
+    <div class="chain-item item-2">
+      <div class="label-top" style="min-height:0; margin-bottom:0;"></div>
+      <div class="link-wrap">
+        <div class="chain-link">
+          <!-- API / lightning bolt -->
+          <svg viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+          </svg>
+        </div>
+      </div>
+      <div class="label-bottom">
+        <span class="tech-name">FastAPI</span>
+        <span class="tech-desc">Python AI microservice exposing the OCR endpoint</span>
+      </div>
+    </div>
+
+    <!-- 3: TypeScript -->
+    <div class="chain-item item-3">
+      <div class="label-top">
+        <span class="tech-name">TypeScript</span>
+        <span class="tech-desc">Superset of JavaScript with static type safety</span>
+      </div>
+      <div class="link-wrap">
+        <div class="chain-link">
+          <!-- TS logo-ish: { } -->
+          <svg viewBox="0 0 24 24" fill="#1e3a8a">
+            <rect x="2" y="2" width="20" height="20" rx="3" fill="#1e3a8a" opacity=".15"/>
+            <text x="4" y="17" font-family="monospace" font-size="11" font-weight="bold" fill="#1e3a8a">TS</text>
+          </svg>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4: Tesseract OCR (even) -->
+    <div class="chain-item item-4">
+      <div class="label-top" style="min-height:0; margin-bottom:0;"></div>
+      <div class="link-wrap">
+        <div class="chain-link">
+          <!-- Eye / OCR icon -->
+          <svg viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+            <circle cx="12" cy="12" r="3"/>
+          </svg>
+        </div>
+      </div>
+      <div class="label-bottom">
+        <span class="tech-name">Tesseract OCR</span>
+        <span class="tech-desc">Reads MRZ text from passport images at 99.7% accuracy</span>
+      </div>
+    </div>
+
+    <!-- 5: Tailwind CSS -->
+    <div class="chain-item item-5">
+      <div class="label-top">
+        <span class="tech-name">Tailwind CSS v4</span>
+        <span class="tech-desc">Utility-first CSS framework for rapid UI styling</span>
+      </div>
+      <div class="link-wrap">
+        <div class="chain-link">
+          <!-- Tailwind wave-ish icon -->
+          <svg viewBox="0 0 54 33" fill="none">
+            <path fill-rule="evenodd" clip-rule="evenodd"
+              d="M27 0C19.8 0 15.3 3.6 13.5 10.8c2.7-3.6 5.85-4.95 9.45-4.05 2.054.514 3.522 2.004 5.147 3.653C30.744 12.672 33.808 16 40.5 16c7.2 0 11.7-3.6 13.5-10.8-2.7 3.6-5.85 4.95-9.45 4.05-2.054-.514-3.522-2.004-5.147-3.653C36.756 3.328 33.692 0 27 0zM13.5 16C6.3 16 1.8 19.6 0 26.8c2.7-3.6 5.85-4.95 9.45-4.05 2.054.514 3.522 2.004 5.147 3.653C17.244 28.672 20.308 32 27 32c7.2 0 11.7-3.6 13.5-10.8-2.7 3.6-5.85 4.95-9.45 4.05-2.054-.514-3.522-2.004-5.147-3.653C23.256 19.328 20.192 16 13.5 16z"
+              fill="#0891b2"/>
+          </svg>
+        </div>
+      </div>
+    </div>
+
+    <!-- 6: MongoDB (even) -->
+    <div class="chain-item item-6">
+      <div class="label-top" style="min-height:0; margin-bottom:0;"></div>
+      <div class="link-wrap">
+        <div class="chain-link">
+          <!-- Database icon -->
+          <svg viewBox="0 0 24 24" fill="none" stroke="#15803d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <ellipse cx="12" cy="5" rx="9" ry="3"/>
+            <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/>
+            <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/>
+          </svg>
+        </div>
+      </div>
+      <div class="label-bottom">
+        <span class="tech-name">MongoDB Atlas</span>
+        <span class="tech-desc">Cloud NoSQL database for screening records &amp; users</span>
+      </div>
+    </div>
+
+    <!-- 7: JWT Auth -->
+    <div class="chain-item item-7">
+      <div class="label-top">
+        <span class="tech-name">JWT + bcrypt</span>
+        <span class="tech-desc">Secure session tokens &amp; password hashing for officer auth</span>
+      </div>
+      <div class="link-wrap">
+        <div class="chain-link">
+          <!-- Shield / lock icon -->
+          <svg viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          </svg>
+        </div>
+      </div>
+    </div>
+
+    <!-- 8: Docker (even) -->
+    <div class="chain-item item-8">
+      <div class="label-top" style="min-height:0; margin-bottom:0;"></div>
+      <div class="link-wrap">
+        <div class="chain-link">
+          <!-- Container / box icon -->
+          <svg viewBox="0 0 24 24" fill="none" stroke="#0284c7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+            <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
+            <line x1="12" y1="22.08" x2="12" y2="12"/>
+          </svg>
+        </div>
+      </div>
+      <div class="label-bottom">
+        <span class="tech-name">Docker</span>
+        <span class="tech-desc">Containerizes the Python AI service for easy deployment</span>
+      </div>
+    </div>
+
+  </div>
+
+</body>
+</html>

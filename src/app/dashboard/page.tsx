@@ -549,32 +549,39 @@ export default function DashboardPage() {
                 </Badge>
               </div>
 
-              <div className="grid grid-cols-2 gap-3 text-xs">
-                <div className="p-3 border border-slate-100 rounded-lg">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs">
+                <div className="p-3 border border-slate-100 rounded-lg bg-slate-50/50">
                   <span className="text-slate-400 block">Document</span>
-                  <span className="font-semibold text-slate-800">
+                  <span className="font-semibold text-slate-800 truncate block">
                     {selectedCase.documentType}
                   </span>
                 </div>
-                <div className="p-3 border border-slate-100 rounded-lg">
+                <div className="p-3 border border-slate-100 rounded-lg bg-slate-50/50">
                   <span className="text-slate-400 block">Status</span>
-                  <span className="font-semibold text-slate-800">
+                  <span className="font-semibold text-slate-800 truncate block">
                     {selectedCase.status}
                   </span>
                 </div>
-                <div className="p-3 border border-slate-100 rounded-lg">
+                <div className="p-3 border border-slate-100 rounded-lg bg-slate-50/50">
                   <span className="text-slate-400 block">Biometric Match</span>
-                  <span className="font-bold text-blue-600">
+                  <span className="font-bold text-blue-600 truncate block">
                     {selectedCase.faceMatchScore || 96.2}%
                   </span>
                 </div>
-                <div className="p-3 border border-slate-100 rounded-lg">
-                  <span className="text-slate-400 block">Assigned Officer</span>
-                  <span className="font-semibold text-slate-800">
-                    {selectedCase.officerId || currentOfficer}
+                <div className="p-3 border border-slate-100 rounded-lg bg-slate-50/50">
+                  <span className="text-slate-400 block">Tampering AI</span>
+                  <span className={`font-bold truncate block ${selectedCase.isTampered ? "text-red-600" : "text-emerald-600"}`}>
+                    {selectedCase.isTampered ? "Tampered" : "Clean"}
                   </span>
                 </div>
               </div>
+
+              {selectedCase.tamperingType && selectedCase.isTampered && (
+                <div className="p-3 bg-purple-50 border border-purple-200 rounded-xl text-purple-900 text-xs">
+                  <span className="font-bold block mb-0.5">3-Stage Tampering Classification:</span>
+                  Detected Method: <span className="font-semibold text-purple-700">{selectedCase.tamperingType}</span>
+                </div>
+              )}
 
               {selectedCase.primaryConcern && (
                 <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-xs">

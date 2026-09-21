@@ -30,17 +30,20 @@ that the Node backend can already start integrating against.
 
 import logging
 
+# pyrefly: ignore [missing-import]
 from fastapi import FastAPI, HTTPException
+# pyrefly: ignore [missing-import]
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 from ocr_module import run_ocr
 from face_module import run_face_verification
+from tampering_module import run_tampering_check
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("ai-service")
 
-app = FastAPI(title="ID-Shield AI Service", version="0.1.0")
+app = FastAPI(title="PRAMAAN AI Document Screening Service", version="0.2.0")
 
 # Wide-open CORS for hackathon dev speed. Tighten before any real deployment.
 app.add_middleware(
@@ -75,9 +78,27 @@ class OCRResponse(BaseModel):
     printed_vs_mrz_match: bool
 
 
+class TamperingRequest(BaseModel):
+    passport_image_base64: str = Field(..., description="Base64-encoded passport image (raw or data URI)")
+
+
+class TamperingResponse(BaseModel):
+    tampered: bool
+    confidence: float
+    tampering_type: str
+    region: list | None = None
+    inference_time_ms: float | None = None
+    method: str | None = None
+
+
+class AnalyzeRequest(BaseModel):
+    passport_image_base64: str = Field(..., description="Base64-encoded passport image")
+    live_image_base64: str | None = Field(None, description="Optional live photo base64")
+
+
 @app.get("/health")
 async def health():
-    return {"status": "ok", "service": "ai-service", "module": "ocr"}
+    return {"status": "ok", "service": "ai-service", "modules": ["ocr", "tampering", "face"]}
 
 
 @app.post("/ocr", response_model=OCRResponse)
@@ -88,6 +109,7 @@ async def ocr_endpoint(payload: OCRRequest):
     except Exception as exc:  # noqa: BLE001 - want a clean 500 for any decode/OCR failure
         logger.exception("OCR failed")
         raise HTTPException(status_code=500, detail=f"OCR processing failed: {exc}") from exc
+
 
 @app.post("/verify-face")
 async def verify_face(payload: VerifyFaceRequest):
@@ -102,7 +124,32 @@ async def verify_face(payload: VerifyFaceRequest):
             status_code=500,
             detail=f"Face verification failed: {exc}"
         ) from exc
-    
+
+
+@app.post("/tampering", response_model=TamperingResponse)
+async def tampering_endpoint(payload: TamperingRequest):
+    try:
+        result = run_tampering_check(payload.passport_image_base64)
+        return result
+    except Exception as exc:
+        logger.exception("Tampering detection failed")
+        raise HTTPException(status_code=500, detail=f"Tampering detection failed: {exc}") from exc
+
+
+@app.post("/analyze")
+async def analyze_endpoint(payload: AnalyzeRequest):
+    try:
+        ocr_result = run_ocr(payload.passport_image_base64)
+        tampering_result = run_tampering_check(payload.passport_image_base64)
+        return {
+            "ocr": ocr_result,
+            "tampering": tampering_result,
+        }
+    except Exception as exc:
+        logger.exception("Analysis failed")
+        raise HTTPException(status_code=500, detail=f"Analysis pipeline failed: {exc}") from exc
+
+
 if __name__ == "__main__":
     import uvicorn
 

@@ -12,6 +12,10 @@ export interface IScreening extends Document {
   primaryConcern?: string | null;
   ocrData?: string | null;
   faceMatchScore?: number | null;
+  tamperingScore?: number | null;
+  isTampered?: boolean | null;
+  tamperingType?: string | null;
+  tamperedRegion?: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -65,6 +69,22 @@ const ScreeningSchema: Schema<IScreening> = new Schema(
     },
     faceMatchScore: {
       type: Number,
+      default: null,
+    },
+    tamperingScore: {
+      type: Number,
+      default: null,
+    },
+    isTampered: {
+      type: Boolean,
+      default: false,
+    },
+    tamperingType: {
+      type: String,
+      default: null,
+    },
+    tamperedRegion: {
+      type: String,
       default: null,
     },
   },
