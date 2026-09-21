@@ -111,6 +111,21 @@ export async function GET() {
   }
 }
 
+// Shape of the real result returned by ai-service's /ocr endpoint (proxied
+// through /api/ocr) — see ai-service/main.py's OCRResponse model.
+interface OcrResult {
+  name?: string | null;
+  passport_no?: string | null;
+  dob?: string | null;
+  expiry?: string | null;
+  nationality?: string | null;
+  confidence?: number;
+  mrz?: {
+    valid_checksum?: boolean;
+    raw_lines?: string[];
+  };
+}
+
 export async function POST(request: Request) {
   try {
     const body = await request.json();
@@ -127,12 +142,25 @@ export async function POST(request: Request) {
 
     await connectDB();
 
+    // Real OCR result from the AI service (see src/app/api/ocr/route.ts),
+    // when the client actually uploaded and read a document. Optional and
+    // backward-compatible: when it's not sent, everything below behaves
+    // exactly as it did before (randomized demo data).
+    const ocr: OcrResult | undefined = body.ocr;
+
     // Realistic document screening data generation based on passport standards
     const docType = body.documentType || "Passport";
-    const passengerName = body.name || "Rajesh Kumar";
+    const passengerName = ocr?.name || body.name || "Rajesh Kumar";
 
-    // Structured rule evaluation
-    const isSuspicious = body.isAnomaly ?? (Math.random() < 0.25); // 25% anomaly rate
+    // Structured rule evaluation. When we have a real OCR result, let the
+    // actual ICAO MRZ checksum decide whether this document looks
+    // suspicious instead of a coin flip — this is the real tamper signal
+    // the OCR module was built to produce. Falls back to the original
+    // 25%-random demo behavior only when no document was actually read.
+    const isSuspicious =
+      body.isAnomaly ??
+      (ocr ? ocr.mrz?.valid_checksum === false : Math.random() < 0.25);
+
     const riskScore = isSuspicious
       ? Math.floor(65 + Math.random() * 25)
       : Math.floor(5 + Math.random() * 20);
@@ -147,22 +175,38 @@ export async function POST(request: Request) {
     ];
 
     const primaryConcern = isSuspicious
-      ? concerns[Math.floor(Math.random() * concerns.length)]
+      ? ocr?.mrz && ocr.mrz.valid_checksum === false
+        ? "MRZ checksum validation failure"
+        : concerns[Math.floor(Math.random() * concerns.length)]
       : null;
 
     const screeningId = `SCR-${Math.floor(10483 + Math.random() * 500)}`;
 
-    const ocrData = {
-      passportNo: `P${Math.floor(7000000 + Math.random() * 2999999)}`,
-      nationality: body.nationality || "IND",
-      dob: body.dob || "15/08/1990",
-      expiry: body.expiry || "30/06/2030",
-      gender: body.gender || "M",
-      mrzLine1: `P<IND${passengerName.toUpperCase().replace(/\s+/g, "<")}<<<<<<<<<<<<<<<<<<`,
-      mrzLine2: `P79100418IND9008157M3006302<<<<<<<<<<<<<<6`,
-      mrzValid: !isSuspicious,
-    };
+    const ocrData = ocr
+      ? {
+          passportNo: ocr.passport_no || "UNKNOWN",
+          nationality: ocr.nationality || body.nationality || "IND",
+          dob: ocr.dob || body.dob || "N/A",
+          expiry: ocr.expiry || body.expiry || "N/A",
+          gender: body.gender || "M",
+          mrzLine1: ocr.mrz?.raw_lines?.[0] || "",
+          mrzLine2: ocr.mrz?.raw_lines?.[1] || "",
+          mrzValid: ocr.mrz?.valid_checksum ?? false,
+        }
+      : {
+          passportNo: `P${Math.floor(7000000 + Math.random() * 2999999)}`,
+          nationality: body.nationality || "IND",
+          dob: body.dob || "15/08/1990",
+          expiry: body.expiry || "30/06/2030",
+          gender: body.gender || "M",
+          mrzLine1: `P<IND${passengerName.toUpperCase().replace(/\s+/g, "<")}<<<<<<<<<<<<<<<<<<`,
+          mrzLine2: `P79100418IND9008157M3006302<<<<<<<<<<<<<<6`,
+          mrzValid: !isSuspicious,
+        };
 
+    // Face verification isn't wired in yet — that's a teammate's separate
+    // model, to be merged the same way this OCR module was. Still
+    // simulated here until then.
     const faceMatchScore = isSuspicious
       ? Number((40 + Math.random() * 20).toFixed(1))
       : Number((91 + Math.random() * 8).toFixed(1));
