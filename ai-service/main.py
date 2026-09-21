@@ -35,6 +35,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 from ocr_module import run_ocr
+from face_module import run_face_verification
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("ai-service")
@@ -53,6 +54,15 @@ app.add_middleware(
 class OCRRequest(BaseModel):
     passport_image_base64: str = Field(..., description="Base64-encoded passport image (raw or data URI)")
 
+class VerifyFaceRequest(BaseModel):
+    passport_image_base64: str = Field(
+        ...,
+        description="Base64-encoded passport image"
+    )
+    live_image_base64: str = Field(
+        ...,
+        description="Base64-encoded live selfie image"
+    )
 
 class OCRResponse(BaseModel):
     name: str | None
@@ -79,7 +89,20 @@ async def ocr_endpoint(payload: OCRRequest):
         logger.exception("OCR failed")
         raise HTTPException(status_code=500, detail=f"OCR processing failed: {exc}") from exc
 
-
+@app.post("/verify-face")
+async def verify_face(payload: VerifyFaceRequest):
+    try:
+        return run_face_verification(
+            payload.passport_image_base64,
+            payload.live_image_base64,
+        )
+    except Exception as exc:
+        logger.exception("Face verification failed")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Face verification failed: {exc}"
+        ) from exc
+    
 if __name__ == "__main__":
     import uvicorn
 
