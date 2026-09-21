@@ -48,7 +48,7 @@ DETECTOR_BACKEND = "retinaface"
 # DeepFace's default ArcFace threshold is ~0.68 distance.
 # We convert distance -> similarity below and expose our own threshold
 # so you can tune it against your own test photos (see face_module_test.py).
-SIMILARITY_MATCH_THRESHOLD = 0.55
+SIMILARITY_MATCH_THRESHOLD = 0.65
 
 
 # ---------------------------------------------------------------------------
