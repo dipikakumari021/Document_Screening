@@ -27,7 +27,13 @@ from typing import Optional
 
 import numpy as np
 from PIL import Image
-from deepface import DeepFace
+
+try:
+    from deepface import DeepFace
+    HAS_DEEPFACE = True
+except ImportError:
+    DeepFace = None
+    HAS_DEEPFACE = False
 
 logger = logging.getLogger("face_module")
 
@@ -69,6 +75,9 @@ def _decode_base64_image(b64_string: str) -> np.ndarray:
 def _extract_embedding(img_array: np.ndarray) -> Optional[np.ndarray]:
     """Run detection + embedding extraction on a single image.
     Returns None if no face was detected."""
+    if not HAS_DEEPFACE or DeepFace is None:
+        logger.warning("DeepFace not installed; returning None for face embedding.")
+        return None
     try:
         reps = DeepFace.represent(
             img_path=img_array,
