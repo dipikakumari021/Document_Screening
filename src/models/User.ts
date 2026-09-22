@@ -5,6 +5,11 @@ export interface IUser extends Document {
   password: string;
   name: string;
   role: string;
+  // Notification preferences
+  notificationEmail?: string;
+  emailAlerts?: boolean;
+  highRiskAlerts?: boolean;
+  dailyDigest?: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -31,6 +36,23 @@ const UserSchema: Schema<IUser> = new Schema(
       type: String,
       default: "OFFICER",
     },
+    // Notification preferences stored in DB
+    notificationEmail: {
+      type: String,
+      default: null,
+    },
+    emailAlerts: {
+      type: Boolean,
+      default: false,
+    },
+    highRiskAlerts: {
+      type: Boolean,
+      default: true,
+    },
+    dailyDigest: {
+      type: Boolean,
+      default: false,
+    },
   },
   {
     timestamps: true,
@@ -48,3 +70,4 @@ const UserSchema: Schema<IUser> = new Schema(
 
 export const User: Model<IUser> =
   mongoose.models.User || mongoose.model<IUser>("User", UserSchema);
+

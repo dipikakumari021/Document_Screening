@@ -4,6 +4,7 @@ import { Screening } from "@/models/Screening";
 import { cookies } from "next/headers";
 import { decrypt } from "@/lib/auth";
 import { ensureDatabaseSeeded } from "@/lib/seed";
+import { sendHighRiskAlert, sendScreeningResult } from "@/lib/email";
 
 export async function GET() {
   try {
@@ -258,6 +259,39 @@ export async function POST(request: Request) {
       tamperingType,
       tamperedRegion,
     });
+
+    const recipientEmail = process.env.GMAIL_USER || "dipikakumari0021@gmail.com";
+
+    // Send email notification asynchronously in background
+    if (recipientEmail) {
+      if (riskLevel === "HIGH") {
+        sendHighRiskAlert({
+          to: recipientEmail,
+          officerName,
+          screeningId,
+          passengerName,
+          documentType: docType,
+          riskScore,
+          riskLevel,
+          primaryConcern,
+          isTampered,
+          tamperingType,
+          timestamp: new Date(),
+        }).catch((err) => console.error("High risk email alert error:", err));
+      } else {
+        sendScreeningResult({
+          to: recipientEmail,
+          officerName,
+          screeningId,
+          passengerName,
+          documentType: docType,
+          riskScore,
+          riskLevel,
+          status,
+          timestamp: new Date(),
+        }).catch((err) => console.error("Screening result email error:", err));
+      }
+    }
 
     return NextResponse.json(newScreening);
   } catch (error) {

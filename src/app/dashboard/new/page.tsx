@@ -14,7 +14,7 @@ import {
   ShieldAlert,
   Layers,
   Zap,
-  Crosshair,
+  Crosshair, Camera,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent } from "@/components/ui/Card";
@@ -28,11 +28,17 @@ export default function NewScreeningPage() {
   const [result, setResult] = useState<any>(null);
 
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [liveSelectedFile, setLiveSelectedFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [isRealOcr, setIsRealOcr] = useState(false);
+  const [liveImagePreview, setLiveImagePreview] = useState<string | null>(null);
+  const [showCamera, setShowCamera] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
   const [isRealTampering, setIsRealTampering] = useState(false);
   const [tamperingData, setTamperingData] = useState<any>(null);
+  const [isRealOcr, setIsRealOcr] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const liveFileInputRef = useRef<HTMLInputElement>(null);
 
   const stages = [
     { name: "OCR & Data Extraction", icon: FileText, desc: "Reading text and MRZ codes..." },
@@ -52,9 +58,75 @@ export default function NewScreeningPage() {
       reader.readAsDataURL(file);
     }
   };
+  const handleLiveFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setLiveSelectedFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setLiveImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+  // Camera handling functions for Live Photo capture
+  async function startCamera() {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+      setCameraStream(stream);
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+      }
+    } catch (err) {
+      console.error("Error accessing camera:", err);
+    }
+  }
+
+  const stopCamera = () => {
+    cameraStream?.getTracks().forEach((track) => track.stop());
+    setCameraStream(null);
+  };
+
+  const capturePhoto = () => {
+    if (!videoRef.current) return;
+    const video = videoRef.current;
+    const canvas = document.createElement("canvas");
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext("2d");
+    if (ctx) {
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const dataUrl = canvas.toDataURL("image/png");
+      const file = dataURLtoFile(dataUrl, "live_photo.png");
+      setLiveSelectedFile(file);
+      setLiveImagePreview(dataUrl);
+    }
+    stopCamera();
+    setShowCamera(false);
+  };
+
+  const dataURLtoFile = (dataurl: string, filename: string) => {
+  const arr = dataurl.split(",");
+  // Extract MIME type safely; throw if format is unexpected
+  const mimeMatch = arr[0].match(/:(.*?);/);
+  if (!mimeMatch) {
+    throw new Error("Invalid data URL format");
+  }
+  const mime = mimeMatch[1];
+  const bstr = atob(arr[1]);
+  let n = bstr.length;
+  const u8arr = new Uint8Array(n);
+  while (n--) {
+    u8arr[n] = bstr.charCodeAt(n);
+  }
+  return new File([u8arr], filename, { type: mime });
+};
 
   const triggerFileInput = () => {
     fileInputRef.current?.click();
+  };
+  const triggerLiveFileInput = () => {
+    liveFileInputRef.current?.click();
   };
 
   const handleStartScreening = () => {
@@ -241,14 +313,53 @@ export default function NewScreeningPage() {
                     </>
                   )}
                 </div>
-
-                <div className="border-2 border-dashed border-slate-300 rounded-xl p-8 flex flex-col items-center justify-center hover:bg-slate-50 hover:border-blue-400 transition-colors cursor-pointer group min-h-[220px]">
-                  <div className="w-16 h-16 bg-emerald-50 text-emerald-500 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                    <UserCheck className="w-8 h-8" />
+            {/* Live Photo capture card or camera modal */}
+            {showCamera ? (
+              <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
+                <div className="bg-white p-4 rounded-lg shadow-lg">
+                  <video ref={videoRef} autoPlay playsInline className="w-80 h-60 bg-black" />
+                  <div className="flex gap-2 mt-2 justify-center">
+                    <Button size="sm" onClick={capturePhoto}>Capture</Button>
+                    <Button size="sm" variant="outline" onClick={() => { stopCamera(); setShowCamera(false); }}>Cancel</Button>
                   </div>
-                  <h3 className="font-semibold text-slate-800">Live Photo</h3>
-                  <p className="text-xs text-slate-500 mt-1">Capture or upload face</p>
                 </div>
+              </div>
+            ) : (
+              <div
+                onClick={() => { setShowCamera(true); startCamera(); }}
+                className="border-2 border-dashed border-slate-300 rounded-xl p-8 flex flex-col items-center justify-center hover:bg-slate-50 hover:border-blue-400 transition-colors cursor-pointer group min-h-[220px] relative overflow-hidden"
+              >
+                {liveImagePreview ? (
+                  <>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={liveImagePreview} alt="Live photo preview" className="absolute inset-0 w-full h-full object-cover" />
+                    <div className="absolute inset-0 bg-slate-950/70 flex flex-col items-center justify-center opacity-0 hover:opacity-100 transition-opacity duration-200">
+                      <Camera className="w-8 h-8 text-white mb-2" />
+                      <span className="text-white font-medium text-sm">Replace Live Photo</span>
+                      <span className="text-white/60 text-xs mt-1 truncate max-w-[85%]">{liveSelectedFile?.name}</span>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="w-16 h-16 bg-blue-50 text-blue-500 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                      <Camera className="w-8 h-8" />
+                    </div>
+                    <h3 className="font-semibold text-slate-800">Live Photo</h3>
+                    <p className="text-xs text-slate-500 mt-1">Capture Live Photo</p>
+                  </>
+                )}
+              </div>
+            )}
+
+
+    <input
+      type="file"
+      ref={liveFileInputRef}
+      onChange={handleLiveFileChange}
+      accept="image/*"
+      capture="environment"
+      className="hidden"
+    />
               </div>
 
               <Button
@@ -525,3 +636,5 @@ export default function NewScreeningPage() {
     </div>
   );
 }
+
+
