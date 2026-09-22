@@ -23,6 +23,7 @@ type Step = "UPLOAD" | "PROCESSING" | "RESULT";
 
 export default function NewScreeningPage() {
   const router = useRouter();
+
   const [step, setStep] = useState<Step>("UPLOAD");
   const [processingStage, setProcessingStage] = useState(0);
   const [result, setResult] = useState<any>(null);
@@ -191,8 +192,10 @@ export default function NewScreeningPage() {
 
     // Step-by-step progress simulation through 4 pipeline stages
     let currentStage = 0;
+
     const interval = setInterval(() => {
       currentStage++;
+
       if (currentStage < stages.length) {
         setProcessingStage(currentStage);
       } else {
@@ -227,7 +230,9 @@ export default function NewScreeningPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
+
       const data = await res.json();
+
       setResult(data);
       setStep("RESULT");
     } catch (error) {
@@ -241,6 +246,7 @@ export default function NewScreeningPage() {
         tamperingType: tamperingResult?.tampering_type || "None",
         isTampered: tamperingResult?.tampered || false,
       });
+
       setStep("RESULT");
     }
   };
@@ -273,6 +279,7 @@ export default function NewScreeningPage() {
             Step {step === "UPLOAD" ? 1 : step === "PROCESSING" ? 2 : 3} of 3
           </span>
         </div>
+
 
         <CardContent className="flex-1 p-8 flex flex-col justify-center items-center">
           {step === "UPLOAD" && (
@@ -372,6 +379,8 @@ export default function NewScreeningPage() {
             </div>
           )}
 
+          {/* ================= PROCESSING ================= */}
+
           {step === "PROCESSING" && (
             <div className="w-full max-w-md space-y-8 animate-in fade-in duration-500">
               <div className="text-center space-y-2">
@@ -384,6 +393,7 @@ export default function NewScreeningPage() {
                   const isActive = i === processingStage;
                   const isDone = i < processingStage;
                   const Icon = stage.icon;
+
 
                   return (
                     <div
@@ -407,6 +417,7 @@ export default function NewScreeningPage() {
                       >
                         {isDone ? <CheckCircle className="w-5 h-5" /> : <Icon className="w-5 h-5" />}
                       </div>
+
                       <div>
                         <h4 className={`font-semibold text-sm ${isActive ? "text-blue-900" : isDone ? "text-emerald-900" : "text-slate-500"}`}>
                           {stage.name}
@@ -421,6 +432,8 @@ export default function NewScreeningPage() {
               </div>
             </div>
           )}
+
+          {/* ================= RESULT ================= */}
 
           {step === "RESULT" && result && (
             <div className="w-full max-w-3xl animate-in slide-in-from-bottom-8 duration-700 space-y-6">

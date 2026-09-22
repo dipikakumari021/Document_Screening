@@ -41,10 +41,14 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# python
+# Python
 __pycache__/
 *.py[cod]
 *$py.class
 .pytest_cache/
 venv/
 .venv/
+
+# Local ArcFace evaluation results
+ai-service/arcface_results.csv
+ai-service/arcface_threshold_results.csv
