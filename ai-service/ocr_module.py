@@ -11,17 +11,17 @@ Pipeline:
        a. On the bottom strip of the passport (the MRZ band) with a
           restricted character whitelist -> feeds mrz_parser.py, which
           does field extraction + checksum validation.
-       b. On the full image / top portion (the "visual inspection zone")
+       b. On the full image / top portion (the visual inspection zone)
           with normal settings -> gives us printed name text to cross-
           check against the MRZ name (printed_vs_mrz_match).
   4. Merge everything into the exact response contract the team agreed
      on, so the Node backend can consume it without any changes:
 
      {
-       "name": str, "passport_no": str, "dob": str, "expiry": str,
-       "nationality": str, "confidence": float,
-       "mrz": {"parsed_fields": {...}, "valid_checksum": bool},
-       "printed_vs_mrz_match": bool
+        "name": str, "passport_no": str, "dob": str, "expiry": str,
+        "nationality": str, "confidence": float,
+        "mrz": {"parsed_fields": {...}, "valid_checksum": bool},
+        "printed_vs_mrz_match": bool
      }
 
 No business logic (risk scoring, DB checks) lives here — that's the
@@ -38,7 +38,14 @@ try:
     import cv2
     import numpy as np
     import pytesseract
+
+    # Tell pytesseract exactly where Tesseract OCR is installed on Windows
+    pytesseract.pytesseract.tesseract_cmd = (
+        r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+    )
+
     from PIL import Image
+
     HAS_OCR_DEPS = True
 except ImportError:
     HAS_OCR_DEPS = False
@@ -49,18 +56,23 @@ except ImportError:
 
 from mrz_parser import parse_td3_mrz
 
+
 # ---------------------------------------------------------------------
 # Image decoding / preprocessing
 # ---------------------------------------------------------------------
+
 
 def decode_base64_image(b64_string: str):
     """Accepts a raw base64 string or a data URI (data:image/...;base64,...)."""
     if not HAS_OCR_DEPS:
         return None
+
     if "," in b64_string and b64_string.strip().startswith("data:"):
         b64_string = b64_string.split(",", 1)[1]
+
     img_bytes = base64.b64decode(b64_string)
     pil_img = Image.open(BytesIO(img_bytes)).convert("RGB")
+
     return cv2.cvtColor(np.array(pil_img), cv2.COLOR_RGB2BGR)
 
 
@@ -68,20 +80,39 @@ def _preprocess(gray: np.ndarray, upscale: float = 2.0) -> np.ndarray:
     """Standard OCR preprocessing: upscale, denoise, adaptive threshold."""
     if not HAS_OCR_DEPS:
         return gray
+
     if upscale != 1.0:
-        gray = cv2.resize(gray, None, fx=upscale, fy=upscale, interpolation=cv2.INTER_CUBIC)
+        gray = cv2.resize(
+            gray,
+            None,
+            fx=upscale,
+            fy=upscale,
+            interpolation=cv2.INTER_CUBIC,
+        )
 
     gray = cv2.bilateralFilter(gray, 9, 75, 75)
+
     thresh = cv2.adaptiveThreshold(
-        gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 31, 15
+        gray,
+        255,
+        cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+        cv2.THRESH_BINARY,
+        31,
+        15,
     )
+
     return thresh
 
 
 def _crop_mrz_band(img: np.ndarray) -> np.ndarray:
-    """MRZ sits in the bottom ~25% of a standard passport bio-data page."""
+    """Crop a generous lower portion of a passport page containing the MRZ."""
     h, w = img.shape[:2]
-    top = int(h * 0.72)
+
+    # Keep the bottom 40% instead of assuming the MRZ always starts at 72%.
+    # This makes the OCR work with passports photographed/scanned at
+    # slightly different layouts and vertical positions.
+    top = int(h * 0.60)
+
     return img[top:h, 0:w]
 
 
@@ -95,6 +126,7 @@ def _is_mrz_only_crop(img: np.ndarray) -> bool:
     without needing a separate code path the caller has to know about.
     """
     h, w = img.shape[:2]
+
     return (w / h) > 2.2
 
 
@@ -105,7 +137,11 @@ def _is_mrz_only_crop(img: np.ndarray) -> bool:
 _MRZ_WHITELIST = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789<"
 
 
-def _find_text_row_band(gray: np.ndarray, dark_threshold: int = 180, pad: int = 4) -> tuple:
+def _find_text_row_band(
+    gray: np.ndarray,
+    dark_threshold: int = 180,
+    pad: int = 4,
+) -> tuple:
     """
     Returns (top, bottom) rows bounding where actual text sits, instead of
     assuming it fills the crop. MRZ crops aren't always tightly bounded —
@@ -116,75 +152,230 @@ def _find_text_row_band(gray: np.ndarray, dark_threshold: int = 180, pad: int = 
     actually is first.
     """
     h = gray.shape[0]
+
     dark_pixel_counts = (gray < dark_threshold).sum(axis=1)
     text_rows = np.nonzero(dark_pixel_counts > 0)[0]
+
     if len(text_rows) == 0:
         return 0, h
+
     top = max(0, int(text_rows.min()) - pad)
     bottom = min(h, int(text_rows.max()) + pad)
+
     return top, bottom
 
 
 def _ocr_mrz_band(mrz_img: np.ndarray) -> tuple:
     """
-    Runs Tesseract restricted to the MRZ charset.
+    OCR the MRZ using multiple preprocessing strategies.
 
-    MRZ lines have no spaces, so Tesseract sees each line as a single
-    ~44-character "word" — running both lines together under --psm 6
-    (block-of-text mode) confuses its line/word segmentation and drops
-    trailing characters. Splitting into the two known lines and OCR'ing
-    each with --psm 7 (treat image as a single text line) is dramatically
-    more reliable, empirically confirmed against synthetic MRZ renders.
+    Different passport photos can have different lighting, blur, scale,
+    contrast, and camera quality. Therefore, we try several OCR variants
+    instead of depending on one preprocessing method.
 
-    Returns (text, mean_word_confidence 0-1).
+    The existing TD3 parser is used to score candidates. A checksum-valid
+    MRZ is preferred over a merely OCR-looking MRZ.
     """
+    from mrz_parser import parse_td3_mrz
+
+    config = (
+        f'--psm 6 '
+        f'-c tessedit_char_whitelist="{_MRZ_WHITELIST}" '
+        f'--oem 3'
+    )
+
+    # ---------------------------------------------------------------
+    # Build several OCR versions of the same MRZ crop.
+    # ---------------------------------------------------------------
+
     gray = cv2.cvtColor(mrz_img, cv2.COLOR_BGR2GRAY)
-    text_top, text_bottom = _find_text_row_band(gray)
-    text_region = gray[text_top:text_bottom, :]
-    mid = text_region.shape[0] // 2
-    halves = [text_region[0:mid, :], text_region[mid:, :]]
 
-    config = f'--psm 7 -c tessedit_char_whitelist="{_MRZ_WHITELIST}" --oem 3'
+    variants = [
+        # 1. Original image
+        mrz_img,
 
-    lines = []
-    confidences = []
-    for half in halves:
-        upscaled = cv2.resize(half, None, fx=2.0, fy=2.0, interpolation=cv2.INTER_CUBIC)
-        text = pytesseract.image_to_string(upscaled, config=config).strip()
-        lines.append(text)
+        # 2. Grayscale image
+        gray,
 
-        data = pytesseract.image_to_data(upscaled, config=config, output_type=pytesseract.Output.DICT)
-        line_confs = [int(c) for c in data["conf"] if c not in ("-1", -1)]
-        if line_confs:
-            confidences.append(sum(line_confs) / len(line_confs) / 100.0)
+        # 3. Grayscale + 2x upscale
+        cv2.resize(
+            gray,
+            None,
+            fx=2.0,
+            fy=2.0,
+            interpolation=cv2.INTER_CUBIC,
+        ),
 
-    combined_text = "\n".join(lines)
-    mean_conf = sum(confidences) / len(confidences) if confidences else 0.0
-    return combined_text, mean_conf
+        # 4. Contrast-enhanced grayscale
+        cv2.equalizeHist(gray),
+    ]
 
+    best_text = ""
+    best_confidence = 0.0
+    best_score = -1
+
+    for variant in variants:
+        # -----------------------------------------------------------
+        # OCR this variant.
+        # -----------------------------------------------------------
+        raw_text = pytesseract.image_to_string(
+            variant,
+            config=config,
+        )
+
+        raw_lines = [
+            line.strip()
+            for line in raw_text.splitlines()
+            if line.strip()
+        ]
+
+        # -----------------------------------------------------------
+        # Clean OCR lines.
+        # -----------------------------------------------------------
+        cleaned_lines = []
+
+        for line in raw_lines:
+            cleaned = re.sub(
+                r"[^A-Z0-9<]",
+                "",
+                line.upper(),
+            )
+
+            # TD3 MRZ lines are normally 44 characters.
+            # Ignore short ordinary passport text.
+            if len(cleaned) >= 30:
+                cleaned_lines.append(cleaned)
+
+        if not cleaned_lines:
+            continue
+
+        # Keep the OCR's original top-to-bottom order.
+        candidate_text = "\n".join(cleaned_lines)
+
+        # -----------------------------------------------------------
+        # Ask the existing parser whether this OCR result contains
+        # a valid TD3 passport MRZ.
+        # -----------------------------------------------------------
+        parsed = parse_td3_mrz(candidate_text)
+
+        score = 0
+
+        if parsed.get("found"):
+            score += 10
+
+        if parsed.get("valid_checksum"):
+            score += 100
+
+        fields = parsed.get("parsed_fields", {})
+
+        if fields.get("passport_no"):
+            score += 10
+
+        if fields.get("nationality"):
+            score += 5
+
+        if fields.get("surname"):
+            score += 5
+
+        if fields.get("dob"):
+            score += 5
+
+        if fields.get("expiry"):
+            score += 5
+
+        # Prefer candidates that actually contain a passport MRZ
+        # starting with P.
+        raw_mrz_lines = parsed.get("raw_lines", [])
+
+        if raw_mrz_lines:
+            if raw_mrz_lines[0].startswith("P"):
+                score += 20
+
+            if len(raw_mrz_lines) >= 2:
+                score += 10
+
+        # -----------------------------------------------------------
+        # Calculate OCR confidence for this variant.
+        # -----------------------------------------------------------
+        data = pytesseract.image_to_data(
+            variant,
+            config=config,
+            output_type=pytesseract.Output.DICT,
+        )
+
+        confidences = []
+
+        for confidence in data["conf"]:
+            try:
+                value = float(confidence)
+            except (TypeError, ValueError):
+                continue
+
+            if value >= 0:
+                confidences.append(value)
+
+        mean_confidence = (
+            sum(confidences) / len(confidences) / 100.0
+            if confidences
+            else 0.0
+        )
+
+        # Small confidence contribution helps choose between
+        # otherwise similar candidates.
+        score += mean_confidence
+
+        # -----------------------------------------------------------
+        # Keep the best OCR candidate.
+        # -----------------------------------------------------------
+        if score > best_score:
+            best_score = score
+            best_text = candidate_text
+            best_confidence = mean_confidence
+
+    return best_text, best_confidence
 
 def _ocr_visual_zone(img: np.ndarray) -> str:
     """General OCR pass over the printed (non-MRZ) portion of the document."""
     h = img.shape[0]
+
     visual_zone = img[0 : int(h * 0.72), :]
-    gray = cv2.cvtColor(visual_zone, cv2.COLOR_BGR2GRAY)
-    processed = _preprocess(gray, upscale=2.0)
-    return pytesseract.image_to_string(processed, config="--psm 6 --oem 3")
+
+    gray = cv2.cvtColor(
+        visual_zone,
+        cv2.COLOR_BGR2GRAY,
+    )
+
+    processed = _preprocess(
+        gray,
+        upscale=2.0,
+    )
+
+    return pytesseract.image_to_string(
+        processed,
+        config="--psm 6 --oem 3",
+    )
 
 
 # ---------------------------------------------------------------------
 # Printed-vs-MRZ name cross-check
 # ---------------------------------------------------------------------
 
+
 def _name_similarity(a: str, b: str) -> float:
     a = re.sub(r"[^A-Z ]", "", a.upper())
     b = re.sub(r"[^A-Z ]", "", b.upper())
+
     if not a or not b:
         return 0.0
+
     return SequenceMatcher(None, a, b).ratio()
 
 
-def _printed_matches_mrz(visual_text: str, mrz_surname: str, mrz_given: str) -> bool:
+def _printed_matches_mrz(
+    visual_text: str,
+    mrz_surname: str,
+    mrz_given: str,
+) -> bool:
     """
     Fuzzy-matches the MRZ name against whatever text we found in the visual
     zone. Passport printing/fonts vary a lot, so we use a similarity
@@ -193,15 +384,31 @@ def _printed_matches_mrz(visual_text: str, mrz_surname: str, mrz_given: str) -> 
     """
     if not mrz_surname and not mrz_given:
         return False
-    visual_upper = re.sub(r"[^A-Z\n ]", " ", visual_text.upper())
+
+    visual_upper = re.sub(
+        r"[^A-Z\n ]",
+        " ",
+        visual_text.upper(),
+    )
+
     best_surname = max(
-        (_name_similarity(mrz_surname, line) for line in visual_upper.splitlines() if line.strip()),
+        (
+            _name_similarity(mrz_surname, line)
+            for line in visual_upper.splitlines()
+            if line.strip()
+        ),
         default=0.0,
     )
+
     best_given = max(
-        (_name_similarity(mrz_given, line) for line in visual_upper.splitlines() if line.strip()),
+        (
+            _name_similarity(mrz_given, line)
+            for line in visual_upper.splitlines()
+            if line.strip()
+        ),
         default=0.0,
     )
+
     return best_surname > 0.6 or best_given > 0.6
 
 
@@ -209,10 +416,12 @@ def _printed_matches_mrz(visual_text: str, mrz_surname: str, mrz_given: str) -> 
 # Public entry point
 # ---------------------------------------------------------------------
 
+
 def extract_raw_mrz_lines(passport_image_b64: str) -> list:
     """
-    Lower-level entry point used by the benchmark script (tests/evaluate_kaggle_dataset.py)
-    to compare RAW OCR output against ground-truth MRZ text character-for-character.
+    Lower-level entry point used by the benchmark script
+    (tests/evaluate_kaggle_dataset.py) to compare RAW OCR output against
+    ground-truth MRZ text character-for-character.
 
     run_ocr() feeds OCR output through parse_td3_mrz(), which cleans/pads/
     truncates and rejects fields that don't form valid calendar dates or
@@ -223,13 +432,28 @@ def extract_raw_mrz_lines(passport_image_b64: str) -> list:
     downstream interpretation, cleaned to 44 chars the same way the parser
     does so the comparison is apples-to-apples.
     """
-    from mrz_parser import _clean_line  # local import: internal helper, benchmark-only use
+    from mrz_parser import _clean_line
 
     img = decode_base64_image(passport_image_b64)
-    mrz_band = img if _is_mrz_only_crop(img) else _crop_mrz_band(img)
+
+    mrz_band = (
+        img
+        if _is_mrz_only_crop(img)
+        else _crop_mrz_band(img)
+    )
+
     raw_text, _ = _ocr_mrz_band(mrz_band)
-    lines = [l for l in raw_text.splitlines() if l.strip()]
-    return [_clean_line(l) for l in lines[:2]]
+
+    lines = [
+        l
+        for l in raw_text.splitlines()
+        if l.strip()
+    ]
+
+    return [
+        _clean_line(l)
+        for l in lines[:2]
+    ]
 
 
 def run_ocr(passport_image_b64: str) -> dict:
@@ -248,7 +472,12 @@ def run_ocr(passport_image_b64: str) -> dict:
             "nationality": "IND",
             "confidence": 0.98,
             "mrz": {
-                "parsed_fields": {"passport_no": "P79100418", "dob": "15/08/1990", "expiry": "30/06/2030", "nationality": "IND"},
+                "parsed_fields": {
+                    "passport_no": "P79100418",
+                    "dob": "15/08/1990",
+                    "expiry": "30/06/2030",
+                    "nationality": "IND",
+                },
                 "valid_checksum": True,
                 "field_checks": {},
                 "mrz_found": True,
@@ -258,24 +487,50 @@ def run_ocr(passport_image_b64: str) -> dict:
         }
 
     img = decode_base64_image(passport_image_b64)
+
     mrz_only_input = _is_mrz_only_crop(img)
 
+    mrz_band = (
+        img
+        if mrz_only_input
+        else _crop_mrz_band(img)
+    )
 
-    mrz_band = img if mrz_only_input else _crop_mrz_band(img)
-    mrz_text, mrz_word_confidence = _ocr_mrz_band(mrz_band)
-    mrz_result = parse_td3_mrz(mrz_text)
+    mrz_text, mrz_word_confidence = _ocr_mrz_band(
+        mrz_band
+    )
 
-    fields = mrz_result.get("parsed_fields", {})
-    full_name = " ".join(filter(None, [fields.get("given_names"), fields.get("surname")])).strip()
+    mrz_result = parse_td3_mrz(
+        mrz_text
+    )
+
+    fields = mrz_result.get(
+        "parsed_fields",
+        {},
+    )
+
+    full_name = " ".join(
+        filter(
+            None,
+            [
+                fields.get("given_names"),
+                fields.get("surname"),
+            ],
+        )
+    ).strip()
 
     printed_vs_mrz = False
+
     if mrz_result.get("found") and not mrz_only_input:
         # Only meaningful when the input is a full document photo with a
         # visual/printed zone above the MRZ. An MRZ-only crop (e.g. the
         # benchmark dataset) has no visual zone to cross-check against.
         visual_text = _ocr_visual_zone(img)
+
         printed_vs_mrz = _printed_matches_mrz(
-            visual_text, fields.get("surname", ""), fields.get("given_names", "")
+            visual_text,
+            fields.get("surname", ""),
+            fields.get("given_names", ""),
         )
 
     # Tesseract's per-word confidence is noisy on MRZ lines (they're one long
@@ -285,8 +540,16 @@ def run_ocr(passport_image_b64: str) -> dict:
     if not mrz_result.get("found"):
         overall_confidence = 0.0
     else:
-        checksum_component = 1.0 if mrz_result.get("valid_checksum") else 0.3
-        overall_confidence = 0.4 * mrz_word_confidence + 0.6 * checksum_component
+        checksum_component = (
+            1.0
+            if mrz_result.get("valid_checksum")
+            else 0.3
+        )
+
+        overall_confidence = (
+            0.4 * mrz_word_confidence
+            + 0.6 * checksum_component
+        )
 
     return {
         "name": full_name or None,
@@ -294,13 +557,28 @@ def run_ocr(passport_image_b64: str) -> dict:
         "dob": fields.get("dob"),
         "expiry": fields.get("expiry"),
         "nationality": fields.get("nationality"),
-        "confidence": round(overall_confidence, 3),
+        "confidence": round(
+            overall_confidence,
+            3,
+        ),
         "mrz": {
             "parsed_fields": fields,
-            "valid_checksum": mrz_result.get("valid_checksum", False),
-            "field_checks": mrz_result.get("field_checks", {}),
-            "mrz_found": mrz_result.get("found", False),
-            "raw_lines": mrz_result.get("raw_lines", []),
+            "valid_checksum": mrz_result.get(
+                "valid_checksum",
+                False,
+            ),
+            "field_checks": mrz_result.get(
+                "field_checks",
+                {},
+            ),
+            "mrz_found": mrz_result.get(
+                "found",
+                False,
+            ),
+            "raw_lines": mrz_result.get(
+                "raw_lines",
+                [],
+            ),
         },
         "printed_vs_mrz_match": printed_vs_mrz,
     }

@@ -38,6 +38,10 @@ export default function NewScreeningPage() {
   const [isRealTampering, setIsRealTampering] = useState(false);
   const [tamperingData, setTamperingData] = useState<any>(null);
   const [isRealOcr, setIsRealOcr] = useState(false);
+
+  // Stores the real ArcFace face-verification result
+  const [faceVerificationData, setFaceVerificationData] = useState<any>(null);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const liveFileInputRef = useRef<HTMLInputElement>(null);
 
@@ -131,22 +135,29 @@ export default function NewScreeningPage() {
   };
 
   const handleStartScreening = () => {
+    // Start the processing screen
     setStep("PROCESSING");
+    setProcessingStage(0);
+
+    // Reset results from any previous screening
     setIsRealOcr(false);
     setIsRealTampering(false);
     setTamperingData(null);
+    setFaceVerificationData(null);
 
     let ocrResult: any = null;
     let tamperingResult: any = null;
+    let faceResult: any = null;
+
     let ocrCompleted = false;
     let tamperingCompleted = false;
+    let faceCompleted = false;
 
-    // Trigger OCR & Tampering checks concurrently if a document is selected
+    // 1. OCR
     if (selectedFile) {
       const formData = new FormData();
       formData.append("passportImage", selectedFile);
 
-      // 1. OCR Call
       fetch("/api/ocr", {
         method: "POST",
         body: formData,
@@ -162,8 +173,12 @@ export default function NewScreeningPage() {
         .finally(() => {
           ocrCompleted = true;
         });
+    } else {
+      ocrCompleted = true;
+    }
 
-      // 2. Tampering Detection Call
+    // 2. Tampering Detection
+    if (selectedFile) {
       const tamperFormData = new FormData();
       tamperFormData.append("passportImage", selectedFile);
 
@@ -176,6 +191,7 @@ export default function NewScreeningPage() {
           if (data?.success && data.tampering) {
             tamperingResult = data.tampering;
             setTamperingData(data.tampering);
+
             if (data.isLiveService) {
               setIsRealTampering(true);
             }
@@ -186,11 +202,59 @@ export default function NewScreeningPage() {
           tamperingCompleted = true;
         });
     } else {
-      ocrCompleted = true;
       tamperingCompleted = true;
     }
 
-    // Step-by-step progress simulation through 4 pipeline stages
+    // 3. Real ArcFace Face Verification
+    // ArcFace needs both the passport/document image and live selfie.
+    if (selectedFile && liveSelectedFile) {
+      const faceFormData = new FormData();
+      faceFormData.append("passportImage", selectedFile);
+      faceFormData.append("selfieImage", liveSelectedFile);
+
+      fetch("/api/verify-face", {
+        method: "POST",
+        body: faceFormData,
+      })
+        .then(async (res) => {
+          const data = await res.json();
+
+          if (!res.ok) {
+            throw new Error(
+              data?.error || "Face verification request failed"
+            );
+          }
+
+          return data;
+        })
+        .then((data) => {
+          // This is the real response from the ArcFace service.
+          faceResult = data;
+          setFaceVerificationData(data);
+        })
+        .catch((err) => {
+          console.warn("ArcFace face verification failed:", err);
+
+          faceResult = {
+            success: false,
+            error:
+              err instanceof Error
+                ? err.message
+                : "Face verification failed",
+          };
+
+          setFaceVerificationData(faceResult);
+        })
+        .finally(() => {
+          faceCompleted = true;
+        });
+    } else {
+      // No selfie means ArcFace cannot be executed.
+      faceCompleted = true;
+      faceResult = null;
+    }
+
+    // Step-by-step progress through the four visible stages.
     let currentStage = 0;
 
     const interval = setInterval(() => {
@@ -200,29 +264,47 @@ export default function NewScreeningPage() {
         setProcessingStage(currentStage);
       } else {
         clearInterval(interval);
-        // Wait until both async services finish
+
+        // Wait until all real AI services have finished.
         const checkDone = setInterval(() => {
-          if (ocrCompleted && tamperingCompleted) {
+          if (ocrCompleted && tamperingCompleted && faceCompleted) {
             clearInterval(checkDone);
-            submitScreening(ocrResult, tamperingResult);
+
+            submitScreening(
+              ocrResult,
+              tamperingResult,
+              faceResult
+            );
           }
         }, 150);
       }
     }, 1100);
   };
 
-  const submitScreening = async (ocrResult: any = null, tamperingResult: any = null) => {
+  const submitScreening = async (
+    ocrResult: any = null,
+    tamperingResult: any = null,
+    faceResult: any = null
+  ) => {
     try {
       const payload: any = {
-        documentType: selectedFile ? "Passport" : "Passport",
-        name: selectedFile ? (ocrResult?.name || "Uploaded Document") : "Rajesh Kumar",
+        documentType: "Passport",
+        name: selectedFile
+          ? ocrResult?.name || "Uploaded Document"
+          : "Rajesh Kumar",
       };
 
       if (ocrResult) {
         payload.ocrResult = ocrResult;
       }
+
       if (tamperingResult) {
         payload.tamperingResult = tamperingResult;
+      }
+
+      // Send the real ArcFace result along with the screening data.
+      if (faceResult) {
+        payload.faceVerificationResult = faceResult;
       }
 
       const res = await fetch("/api/screenings", {
@@ -233,10 +315,21 @@ export default function NewScreeningPage() {
 
       const data = await res.json();
 
-      setResult(data);
+      // Keep the real ArcFace result in the frontend even if the
+      // screening API does not yet store this field.
+      setResult({
+        ...data,
+        faceVerificationResult: faceResult,
+        faceMatchScore:
+          typeof faceResult?.similarity === "number"
+            ? Math.round(faceResult.similarity * 100)
+            : null,
+      });
+
       setStep("RESULT");
     } catch (error) {
       console.error("Screening save error:", error);
+
       setResult({
         riskLevel: tamperingResult?.tampered ? "HIGH" : "LOW",
         riskScore: tamperingResult?.tampered ? 91 : 12,
@@ -245,6 +338,13 @@ export default function NewScreeningPage() {
         documentType: "Passport",
         tamperingType: tamperingResult?.tampering_type || "None",
         isTampered: tamperingResult?.tampered || false,
+
+        // Preserve the real ArcFace result even if saving fails.
+        faceVerificationResult: faceResult,
+        faceMatchScore:
+          typeof faceResult?.similarity === "number"
+            ? Math.round(faceResult.similarity * 100)
+            : null,
       });
 
       setStep("RESULT");
@@ -372,10 +472,21 @@ export default function NewScreeningPage() {
               <Button
                 size="lg"
                 onClick={handleStartScreening}
-                className="w-full max-w-sm h-12 bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-500/20"
+                disabled={Boolean(selectedFile && !liveSelectedFile)}
+                className="w-full max-w-sm h-12 bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {selectedFile ? "Start AI Screening Process" : "Start Simulated Screening"}
+                {selectedFile
+                  ? liveSelectedFile
+                    ? "Start AI Screening Process"
+                    : "Add Live Photo to Continue"
+                  : "Start Simulated Screening"}
               </Button>
+
+              {selectedFile && !liveSelectedFile && (
+                <p className="text-xs text-amber-600 -mt-5">
+                  A live photo is required for real ArcFace face verification.
+                </p>
+              )}
             </div>
           )}
 
@@ -554,9 +665,24 @@ export default function NewScreeningPage() {
                       </li>
                       <li className="flex justify-between items-center border-b border-slate-100 pb-2">
                         <span className="text-slate-500">Face Verification:</span>
-                        <span className={`font-bold text-sm ${result.faceMatchScore < 60 ? "text-red-600" : "text-emerald-600"}`}>
-                          {result.faceMatchScore || 92}% Match
-                        </span>
+                        {faceVerificationData?.success &&
+                        typeof faceVerificationData?.similarity === "number" ? (
+                          <span
+                            className={`font-bold text-sm ${
+                              faceVerificationData.match
+                                ? "text-emerald-600"
+                                : "text-red-600"
+                            }`}
+                          >
+                            {Math.round(faceVerificationData.similarity * 100)}%
+                            {" "}
+                            {faceVerificationData.match ? "Match" : "No Match"}
+                          </span>
+                        ) : (
+                          <span className="font-semibold text-slate-500">
+                            Not Available
+                          </span>
+                        )}
                       </li>
                       <li className="flex justify-between items-center border-b border-slate-100 pb-2">
                         <span className="text-slate-500">Tampering Detection:</span>
