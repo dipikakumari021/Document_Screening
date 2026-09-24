@@ -14,7 +14,8 @@ import {
   ShieldAlert,
   Layers,
   Zap,
-  Crosshair, Camera,
+  Crosshair,
+  Camera,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent } from "@/components/ui/Card";
@@ -29,6 +30,8 @@ export default function NewScreeningPage() {
   const [result, setResult] = useState<any>(null);
 
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  // Stores the type of document selected for screening.
+  const [documentType, setDocumentType] = useState("Passport");
   const [liveSelectedFile, setLiveSelectedFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [liveImagePreview, setLiveImagePreview] = useState<string | null>(null);
@@ -46,39 +49,71 @@ export default function NewScreeningPage() {
   const liveFileInputRef = useRef<HTMLInputElement>(null);
 
   const stages = [
-    { name: "OCR & Data Extraction", icon: FileText, desc: "Reading text and MRZ codes..." },
-    { name: "Document Validation", icon: CheckCircle, desc: "Verifying formatting and expiry..." },
-    { name: "Tampering Detection (3-Stage AI)", icon: Search, desc: "Scanning for splicing, copy-move & pixel edits..." },
-    { name: "Face Verification", icon: UserCheck, desc: "Comparing document photo with live face..." },
+    {
+      name: "OCR & Data Extraction",
+      icon: FileText,
+      desc: "Reading text and MRZ codes...",
+    },
+    {
+      name: "Document Validation",
+      icon: CheckCircle,
+      desc: "Verifying formatting and expiry...",
+    },
+    {
+      name: "Tampering Detection (3-Stage AI)",
+      icon: Search,
+      desc: "Scanning for splicing, copy-move & pixel edits...",
+    },
+    {
+      name: "Face Verification",
+      icon: UserCheck,
+      desc: "Comparing document photo with live face...",
+    },
   ];
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
+
     if (file) {
       setSelectedFile(file);
+
       const reader = new FileReader();
+
       reader.onloadend = () => {
         setImagePreview(reader.result as string);
       };
+
       reader.readAsDataURL(file);
     }
   };
-  const handleLiveFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+
+  const handleLiveFileChange = (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
     const file = e.target.files?.[0];
+
     if (file) {
       setLiveSelectedFile(file);
+
       const reader = new FileReader();
+
       reader.onloadend = () => {
         setLiveImagePreview(reader.result as string);
       };
+
       reader.readAsDataURL(file);
     }
   };
+
   // Camera handling functions for Live Photo capture
   async function startCamera() {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "environment" },
+      });
+
       setCameraStream(stream);
+
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
       }
@@ -94,42 +129,68 @@ export default function NewScreeningPage() {
 
   const capturePhoto = () => {
     if (!videoRef.current) return;
+
     const video = videoRef.current;
+
     const canvas = document.createElement("canvas");
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
+
     const ctx = canvas.getContext("2d");
+
     if (ctx) {
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      ctx.drawImage(
+        video,
+        0,
+        0,
+        canvas.width,
+        canvas.height
+      );
+
       const dataUrl = canvas.toDataURL("image/png");
       const file = dataURLtoFile(dataUrl, "live_photo.png");
+
       setLiveSelectedFile(file);
       setLiveImagePreview(dataUrl);
     }
+
     stopCamera();
     setShowCamera(false);
   };
 
-  const dataURLtoFile = (dataurl: string, filename: string) => {
-  const arr = dataurl.split(",");
-  // Extract MIME type safely; throw if format is unexpected
-  const mimeMatch = arr[0].match(/:(.*?);/);
-  if (!mimeMatch) {
-    throw new Error("Invalid data URL format");
-  }
-  const mime = mimeMatch[1];
-  const bstr = atob(arr[1]);
-  let n = bstr.length;
-  const u8arr = new Uint8Array(n);
-  while (n--) {
-    u8arr[n] = bstr.charCodeAt(n);
-  }
-  return new File([u8arr], filename, { type: mime });
-};
+  const dataURLtoFile = (
+    dataurl: string,
+    filename: string
+  ) => {
+    const arr = dataurl.split(",");
+
+    // Extract MIME type safely; throw if format is unexpected
+    const mimeMatch = arr[0].match(/:(.*?);/);
+
+    if (!mimeMatch) {
+      throw new Error("Invalid data URL format");
+    }
+
+    const mime = mimeMatch[1];
+    const bstr = atob(arr[1]);
+
+    let n = bstr.length;
+
+    const u8arr = new Uint8Array(n);
+
+    while (n--) {
+      u8arr[n] = bstr.charCodeAt(n);
+    }
+
+    return new File([u8arr], filename, {
+      type: mime,
+    });
+  };
 
   const triggerFileInput = () => {
     fileInputRef.current?.click();
   };
+
   const triggerLiveFileInput = () => {
     liveFileInputRef.current?.click();
   };
@@ -156,6 +217,7 @@ export default function NewScreeningPage() {
     // 1. OCR
     if (selectedFile) {
       const formData = new FormData();
+
       formData.append("passportImage", selectedFile);
 
       fetch("/api/ocr", {
@@ -169,7 +231,9 @@ export default function NewScreeningPage() {
             setIsRealOcr(true);
           }
         })
-        .catch((err) => console.warn("OCR service fallback:", err))
+        .catch((err) =>
+          console.warn("OCR service fallback:", err)
+        )
         .finally(() => {
           ocrCompleted = true;
         });
@@ -180,6 +244,7 @@ export default function NewScreeningPage() {
     // 2. Tampering Detection
     if (selectedFile) {
       const tamperFormData = new FormData();
+
       tamperFormData.append("passportImage", selectedFile);
 
       fetch("/api/tampering", {
@@ -197,7 +262,9 @@ export default function NewScreeningPage() {
             }
           }
         })
-        .catch((err) => console.warn("Tampering service fallback:", err))
+        .catch((err) =>
+          console.warn("Tampering service fallback:", err)
+        )
         .finally(() => {
           tamperingCompleted = true;
         });
@@ -209,6 +276,7 @@ export default function NewScreeningPage() {
     // ArcFace needs both the passport/document image and live selfie.
     if (selectedFile && liveSelectedFile) {
       const faceFormData = new FormData();
+
       faceFormData.append("passportImage", selectedFile);
       faceFormData.append("selfieImage", liveSelectedFile);
 
@@ -221,7 +289,8 @@ export default function NewScreeningPage() {
 
           if (!res.ok) {
             throw new Error(
-              data?.error || "Face verification request failed"
+              data?.error ||
+                "Face verification request failed"
             );
           }
 
@@ -233,7 +302,10 @@ export default function NewScreeningPage() {
           setFaceVerificationData(data);
         })
         .catch((err) => {
-          console.warn("ArcFace face verification failed:", err);
+          console.warn(
+            "ArcFace face verification failed:",
+            err
+          );
 
           faceResult = {
             success: false,
@@ -267,7 +339,11 @@ export default function NewScreeningPage() {
 
         // Wait until all real AI services have finished.
         const checkDone = setInterval(() => {
-          if (ocrCompleted && tamperingCompleted && faceCompleted) {
+          if (
+            ocrCompleted &&
+            tamperingCompleted &&
+            faceCompleted
+          ) {
             clearInterval(checkDone);
 
             submitScreening(
@@ -288,7 +364,8 @@ export default function NewScreeningPage() {
   ) => {
     try {
       const payload: any = {
-        documentType: "Passport",
+        documentType,
+
         name: selectedFile
           ? ocrResult?.name || "Uploaded Document"
           : "Rajesh Kumar",
@@ -309,7 +386,9 @@ export default function NewScreeningPage() {
 
       const res = await fetch("/api/screenings", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify(payload),
       });
 
@@ -320,6 +399,7 @@ export default function NewScreeningPage() {
       setResult({
         ...data,
         faceVerificationResult: faceResult,
+
         faceMatchScore:
           typeof faceResult?.similarity === "number"
             ? Math.round(faceResult.similarity * 100)
@@ -331,19 +411,38 @@ export default function NewScreeningPage() {
       console.error("Screening save error:", error);
 
       setResult({
-        riskLevel: tamperingResult?.tampered ? "HIGH" : "LOW",
-        riskScore: tamperingResult?.tampered ? 91 : 12,
-        status: tamperingResult?.tampered ? "PENDING REVIEW" : "CLEARED",
-        name: selectedFile ? "Uploaded Document" : "Rajesh Kumar",
-        documentType: "Passport",
-        tamperingType: tamperingResult?.tampering_type || "None",
-        isTampered: tamperingResult?.tampered || false,
+        riskLevel: tamperingResult?.tampered
+          ? "HIGH"
+          : "LOW",
+
+        riskScore: tamperingResult?.tampered
+          ? 91
+          : 12,
+
+        status: tamperingResult?.tampered
+          ? "PENDING REVIEW"
+          : "CLEARED",
+
+        name: selectedFile
+          ? "Uploaded Document"
+          : "Rajesh Kumar",
+
+        documentType,
+
+        tamperingType:
+          tamperingResult?.tampering_type || "None",
+
+        isTampered:
+          tamperingResult?.tampered || false,
 
         // Preserve the real ArcFace result even if saving fails.
         faceVerificationResult: faceResult,
+
         faceMatchScore:
           typeof faceResult?.similarity === "number"
-            ? Math.round(faceResult.similarity * 100)
+            ? Math.round(
+                faceResult.similarity * 100
+              )
             : null,
       });
 
@@ -364,26 +463,97 @@ export default function NewScreeningPage() {
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-slate-900 tracking-tight">New Screening</h1>
-        <p className="text-slate-500 mt-1">Upload identity documents for AI verification and multi-model tampering inspection.</p>
+        <h1 className="text-3xl font-bold text-slate-900 tracking-tight">
+          New Screening
+        </h1>
+
+        <p className="text-slate-500 mt-1">
+          Upload identity documents for AI verification and
+          multi-model tampering inspection.
+        </p>
       </div>
 
       <Card className="border-slate-200 shadow-sm overflow-hidden min-h-[520px] flex flex-col relative">
         <div className="flex border-b border-slate-100 bg-slate-50/50 p-4 justify-between items-center">
           <div className="flex gap-2">
-            <div className={`h-2 w-16 rounded-full transition-colors ${step === "UPLOAD" || step === "PROCESSING" || step === "RESULT" ? "bg-blue-600" : "bg-slate-200"}`}></div>
-            <div className={`h-2 w-16 rounded-full transition-colors ${step === "PROCESSING" || step === "RESULT" ? "bg-blue-600" : "bg-slate-200"}`}></div>
-            <div className={`h-2 w-16 rounded-full transition-colors ${step === "RESULT" ? "bg-blue-600" : "bg-slate-200"}`}></div>
+            <div
+              className={`h-2 w-16 rounded-full transition-colors ${
+                step === "UPLOAD" ||
+                step === "PROCESSING" ||
+                step === "RESULT"
+                  ? "bg-blue-600"
+                  : "bg-slate-200"
+              }`}
+            ></div>
+
+            <div
+              className={`h-2 w-16 rounded-full transition-colors ${
+                step === "PROCESSING" ||
+                step === "RESULT"
+                  ? "bg-blue-600"
+                  : "bg-slate-200"
+              }`}
+            ></div>
+
+            <div
+              className={`h-2 w-16 rounded-full transition-colors ${
+                step === "RESULT"
+                  ? "bg-blue-600"
+                  : "bg-slate-200"
+              }`}
+            ></div>
           </div>
+
           <span className="text-sm font-medium text-slate-500">
-            Step {step === "UPLOAD" ? 1 : step === "PROCESSING" ? 2 : 3} of 3
+            Step{" "}
+            {step === "UPLOAD"
+              ? 1
+              : step === "PROCESSING"
+              ? 2
+              : 3}{" "}
+            of 3
           </span>
         </div>
-
 
         <CardContent className="flex-1 p-8 flex flex-col justify-center items-center">
           {step === "UPLOAD" && (
             <div className="w-full max-w-xl text-center space-y-8 animate-in fade-in zoom-in duration-500">
+              <div className="w-full max-w-md mx-auto text-left">
+                <label
+                  htmlFor="documentType"
+                  className="block text-sm font-semibold text-slate-700 mb-2"
+                >
+                  Document Type
+                </label>
+
+                <select
+                  id="documentType"
+                  value={documentType}
+                  onChange={(e) =>
+                    setDocumentType(e.target.value)
+                  }
+                  className="w-full h-11 rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-800 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                >
+                  <option value="Passport">
+                    Passport
+                  </option>
+
+                  <option value="Visa">Visa</option>
+
+                  <option value="National ID">
+                    National ID
+                  </option>
+
+                  <option value="Driving Licence">
+                    Driving Licence
+                  </option>
+
+                  <option value="Permit">
+                    Permit
+                  </option>
+                </select>
+              </div>
+
               <div className="grid grid-cols-2 gap-6">
                 <input
                   type="file"
@@ -392,6 +562,7 @@ export default function NewScreeningPage() {
                   accept="image/*"
                   className="hidden"
                 />
+
                 <div
                   onClick={triggerFileInput}
                   className="border-2 border-dashed border-slate-300 rounded-xl p-8 flex flex-col items-center justify-center hover:bg-slate-50 hover:border-blue-400 transition-colors cursor-pointer group min-h-[220px] relative overflow-hidden"
@@ -401,13 +572,20 @@ export default function NewScreeningPage() {
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={imagePreview}
-                        alt="Passport preview"
+                        alt={`${documentType} preview`}
                         className="absolute inset-0 w-full h-full object-cover"
                       />
+
                       <div className="absolute inset-0 bg-slate-950/70 flex flex-col items-center justify-center opacity-0 hover:opacity-100 transition-opacity duration-200">
                         <Upload className="w-8 h-8 text-white mb-2" />
-                        <span className="text-white font-medium text-sm">Replace Document</span>
-                        <span className="text-white/60 text-xs mt-1 truncate max-w-[85%]">{selectedFile?.name}</span>
+
+                        <span className="text-white font-medium text-sm">
+                          Replace Document
+                        </span>
+
+                        <span className="text-white/60 text-xs mt-1 truncate max-w-[85%]">
+                          {selectedFile?.name}
+                        </span>
                       </div>
                     </>
                   ) : (
@@ -415,64 +593,113 @@ export default function NewScreeningPage() {
                       <div className="w-16 h-16 bg-blue-50 text-blue-500 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                         <FileImage className="w-8 h-8" />
                       </div>
-                      <h3 className="font-semibold text-slate-800">Travel Document</h3>
-                      <p className="text-xs text-slate-500 mt-1">Upload Passport or ID</p>
+
+                      <h3 className="font-semibold text-slate-800">
+                        Travel Document
+                      </h3>
+
+                      <p className="text-xs text-slate-500 mt-1">
+                        Upload {documentType}
+                      </p>
                     </>
                   )}
                 </div>
-            {/* Live Photo capture card or camera modal */}
-            {showCamera ? (
-              <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
-                <div className="bg-white p-4 rounded-lg shadow-lg">
-                  <video ref={videoRef} autoPlay playsInline className="w-80 h-60 bg-black" />
-                  <div className="flex gap-2 mt-2 justify-center">
-                    <Button size="sm" onClick={capturePhoto}>Capture</Button>
-                    <Button size="sm" variant="outline" onClick={() => { stopCamera(); setShowCamera(false); }}>Cancel</Button>
+
+                {/* Live Photo capture card or camera modal */}
+                {showCamera ? (
+                  <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
+                    <div className="bg-white p-4 rounded-lg shadow-lg">
+                      <video
+                        ref={videoRef}
+                        autoPlay
+                        playsInline
+                        className="w-80 h-60 bg-black"
+                      />
+
+                      <div className="flex gap-2 mt-2 justify-center">
+                        <Button
+                          size="sm"
+                          onClick={capturePhoto}
+                        >
+                          Capture
+                        </Button>
+
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            stopCamera();
+                            setShowCamera(false);
+                          }}
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </div>
-            ) : (
-              <div
-                onClick={() => { setShowCamera(true); startCamera(); }}
-                className="border-2 border-dashed border-slate-300 rounded-xl p-8 flex flex-col items-center justify-center hover:bg-slate-50 hover:border-blue-400 transition-colors cursor-pointer group min-h-[220px] relative overflow-hidden"
-              >
-                {liveImagePreview ? (
-                  <>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={liveImagePreview} alt="Live photo preview" className="absolute inset-0 w-full h-full object-cover" />
-                    <div className="absolute inset-0 bg-slate-950/70 flex flex-col items-center justify-center opacity-0 hover:opacity-100 transition-opacity duration-200">
-                      <Camera className="w-8 h-8 text-white mb-2" />
-                      <span className="text-white font-medium text-sm">Replace Live Photo</span>
-                      <span className="text-white/60 text-xs mt-1 truncate max-w-[85%]">{liveSelectedFile?.name}</span>
-                    </div>
-                  </>
                 ) : (
-                  <>
-                    <div className="w-16 h-16 bg-blue-50 text-blue-500 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                      <Camera className="w-8 h-8" />
-                    </div>
-                    <h3 className="font-semibold text-slate-800">Live Photo</h3>
-                    <p className="text-xs text-slate-500 mt-1">Capture Live Photo</p>
-                  </>
+                  <div
+                    onClick={() => {
+                      setShowCamera(true);
+                      startCamera();
+                    }}
+                    className="border-2 border-dashed border-slate-300 rounded-xl p-8 flex flex-col items-center justify-center hover:bg-slate-50 hover:border-blue-400 transition-colors cursor-pointer group min-h-[220px] relative overflow-hidden"
+                  >
+                    {liveImagePreview ? (
+                      <>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={liveImagePreview}
+                          alt="Live photo preview"
+                          className="absolute inset-0 w-full h-full object-cover"
+                        />
+
+                        <div className="absolute inset-0 bg-slate-950/70 flex flex-col items-center justify-center opacity-0 hover:opacity-100 transition-opacity duration-200">
+                          <Camera className="w-8 h-8 text-white mb-2" />
+
+                          <span className="text-white font-medium text-sm">
+                            Replace Live Photo
+                          </span>
+
+                          <span className="text-white/60 text-xs mt-1 truncate max-w-[85%]">
+                            {liveSelectedFile?.name}
+                          </span>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="w-16 h-16 bg-blue-50 text-blue-500 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                          <Camera className="w-8 h-8" />
+                        </div>
+
+                        <h3 className="font-semibold text-slate-800">
+                          Live Photo
+                        </h3>
+
+                        <p className="text-xs text-slate-500 mt-1">
+                          Capture Live Photo
+                        </p>
+                      </>
+                    )}
+                  </div>
                 )}
-              </div>
-            )}
 
-
-    <input
-      type="file"
-      ref={liveFileInputRef}
-      onChange={handleLiveFileChange}
-      accept="image/*"
-      capture="environment"
-      className="hidden"
-    />
+                <input
+                  type="file"
+                  ref={liveFileInputRef}
+                  onChange={handleLiveFileChange}
+                  accept="image/*"
+                  capture="environment"
+                  className="hidden"
+                />
               </div>
 
               <Button
                 size="lg"
                 onClick={handleStartScreening}
-                disabled={Boolean(selectedFile && !liveSelectedFile)}
+                disabled={Boolean(
+                  selectedFile && !liveSelectedFile
+                )}
                 className="w-full max-w-sm h-12 bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {selectedFile
@@ -484,7 +711,8 @@ export default function NewScreeningPage() {
 
               {selectedFile && !liveSelectedFile && (
                 <p className="text-xs text-amber-600 -mt-5">
-                  A live photo is required for real ArcFace face verification.
+                  A live photo is required for real ArcFace face
+                  verification.
                 </p>
               )}
             </div>
@@ -495,16 +723,25 @@ export default function NewScreeningPage() {
           {step === "PROCESSING" && (
             <div className="w-full max-w-md space-y-8 animate-in fade-in duration-500">
               <div className="text-center space-y-2">
-                <h3 className="text-2xl font-bold text-slate-800">AI Analysis in Progress</h3>
-                <p className="text-slate-500">PRAMAAN AI is scanning security features & document integrity.</p>
+                <h3 className="text-2xl font-bold text-slate-800">
+                  AI Analysis in Progress
+                </h3>
+
+                <p className="text-slate-500">
+                  PRAMAAN AI is scanning security features &
+                  document integrity.
+                </p>
               </div>
 
               <div className="space-y-3">
                 {stages.map((stage, i) => {
-                  const isActive = i === processingStage;
-                  const isDone = i < processingStage;
-                  const Icon = stage.icon;
+                  const isActive =
+                    i === processingStage;
 
+                  const isDone =
+                    i < processingStage;
+
+                  const Icon = stage.icon;
 
                   return (
                     <div
@@ -526,15 +763,38 @@ export default function NewScreeningPage() {
                             : "bg-slate-200 text-slate-400"
                         }`}
                       >
-                        {isDone ? <CheckCircle className="w-5 h-5" /> : <Icon className="w-5 h-5" />}
+                        {isDone ? (
+                          <CheckCircle className="w-5 h-5" />
+                        ) : (
+                          <Icon className="w-5 h-5" />
+                        )}
                       </div>
 
                       <div>
-                        <h4 className={`font-semibold text-sm ${isActive ? "text-blue-900" : isDone ? "text-emerald-900" : "text-slate-500"}`}>
+                        <h4
+                          className={`font-semibold text-sm ${
+                            isActive
+                              ? "text-blue-900"
+                              : isDone
+                              ? "text-emerald-900"
+                              : "text-slate-500"
+                          }`}
+                        >
                           {stage.name}
                         </h4>
-                        <p className={`text-xs ${isActive ? "text-blue-600 font-medium" : "text-slate-500"}`}>
-                          {isDone ? "Completed" : isActive ? stage.desc : "Pending..."}
+
+                        <p
+                          className={`text-xs ${
+                            isActive
+                              ? "text-blue-600 font-medium"
+                              : "text-slate-500"
+                          }`}
+                        >
+                          {isDone
+                            ? "Completed"
+                            : isActive
+                            ? stage.desc
+                            : "Pending..."}
                         </p>
                       </div>
                     </div>
@@ -564,8 +824,15 @@ export default function NewScreeningPage() {
                     <ShieldAlert className="w-10 h-10" />
                   )}
                 </div>
-                <h2 className="text-3xl font-bold text-slate-900">Screening Complete</h2>
-                <p className="text-slate-500 text-sm mt-1">Tracking ID: {result.screeningId || "SCR-NEW"}</p>
+
+                <h2 className="text-3xl font-bold text-slate-900">
+                  Screening Complete
+                </h2>
+
+                <p className="text-slate-500 text-sm mt-1">
+                  Tracking ID:{" "}
+                  {result.screeningId || "SCR-NEW"}
+                </p>
 
                 <div className="flex flex-wrap items-center justify-center gap-2 mt-3">
                   {isRealOcr && (
@@ -574,6 +841,7 @@ export default function NewScreeningPage() {
                       OCR Engine Active
                     </span>
                   )}
+
                   {isRealTampering ? (
                     <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-purple-50 border border-purple-200 text-purple-700 text-xs font-semibold">
                       <Zap className="w-3.5 h-3.5 text-purple-600" />
@@ -588,6 +856,7 @@ export default function NewScreeningPage() {
               </div>
 
               {/* Main Score Banner */}
+
               <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
                 <div
                   className={`p-6 text-center border-b ${
@@ -601,6 +870,7 @@ export default function NewScreeningPage() {
                   <div className="text-xs font-bold uppercase tracking-wider mb-1 text-slate-600">
                     Calculated Risk Score
                   </div>
+
                   <div
                     className={`text-5xl font-black ${
                       result.riskLevel === "LOW"
@@ -611,8 +881,12 @@ export default function NewScreeningPage() {
                     }`}
                   >
                     {result.riskScore}
-                    <span className="text-2xl font-normal text-slate-500">/100</span>
+
+                    <span className="text-2xl font-normal text-slate-500">
+                      /100
+                    </span>
                   </div>
+
                   <div
                     className={`mt-2 text-sm font-semibold ${
                       result.riskLevel === "LOW"
@@ -622,61 +896,136 @@ export default function NewScreeningPage() {
                         : "text-amber-800"
                     }`}
                   >
-                    {result.status === "CLEARED" ? "Verification Passed — Allow Entry" : "Flagged for Physical Inspection"}
+                    {result.status === "CLEARED"
+                      ? "Verification Passed — Allow Entry"
+                      : "Flagged for Physical Inspection"}
                   </div>
                 </div>
 
                 {/* Grid breakdown */}
+
                 <div className="p-6 grid md:grid-cols-2 gap-6 bg-white">
                   {/* Extracted Data */}
+
                   <div>
                     <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3 flex items-center gap-1.5">
-                      <FileText className="w-4 h-4 text-blue-600" /> Extracted Bio Data
+                      <FileText className="w-4 h-4 text-blue-600" />
+                      Extracted Bio Data
                     </h4>
+
                     <ul className="space-y-2.5 text-sm">
                       <li className="flex justify-between border-b border-slate-100 pb-2">
-                        <span className="text-slate-500">Holder Name:</span>
-                        <span className="font-semibold text-slate-800">{result.name}</span>
+                        <span className="text-slate-500">
+                          Holder Name:
+                        </span>
+
+                        <span className="font-semibold text-slate-800">
+                          {result.name}
+                        </span>
                       </li>
+
                       <li className="flex justify-between border-b border-slate-100 pb-2">
-                        <span className="text-slate-500">Document Type:</span>
-                        <span className="font-semibold text-slate-800">{result.documentType}</span>
+                        <span className="text-slate-500">
+                          Passport Number:
+                        </span>
+
+                        <span className="font-semibold text-slate-800 font-mono text-xs">
+                          {parsedOcrData?.passportNo || "Not Available"}
+                        </span>
                       </li>
+
                       <li className="flex justify-between border-b border-slate-100 pb-2">
-                        <span className="text-slate-500">Primary Concern:</span>
-                        <span className={`font-semibold ${result.primaryConcern ? "text-red-600" : "text-emerald-600"}`}>
-                          {result.primaryConcern || "None (All checks passed)"}
+                        <span className="text-slate-500">
+                          Nationality:
+                        </span>
+
+                        <span className="font-semibold text-slate-800">
+                          {parsedOcrData?.nationality || "Not Available"}
+                        </span>
+                      </li>
+
+                      <li className="flex justify-between border-b border-slate-100 pb-2">
+                        <span className="text-slate-500">
+                          Date of Birth:
+                        </span>
+
+                        <span className="font-semibold text-slate-800">
+                          {parsedOcrData?.dob || "Not Available"}
+                        </span>
+                      </li>
+
+                      <li className="flex justify-between border-b border-slate-100 pb-2">
+                        <span className="text-slate-500">
+                          Expiry Date:
+                        </span>
+
+                        <span className="font-semibold text-slate-800">
+                          {parsedOcrData?.expiry || "Not Available"}
+                        </span>
+                      </li>
+
+                      <li className="flex justify-between border-b border-slate-100 pb-2">
+                        <span className="text-slate-500">
+                          Gender:
+                        </span>
+
+                        <span className="font-semibold text-slate-800">
+                          {parsedOcrData?.gender || "Not Available"}
+                        </span>
+                      </li>
+
+                      <li className="flex justify-between border-b border-slate-100 pb-2">
+                        <span className="text-slate-500">
+                          Document Type:
+                        </span>
+
+                        <span className="font-semibold text-slate-800">
+                          {result.documentType}
+                        </span>
+                      </li>
+
+                      <li className="flex justify-between border-b border-slate-100 pb-2">
+                        <span className="text-slate-500">
+                          Primary Concern:
+                        </span>
+
+                        <span
+                          className={`font-semibold ${
+                            result.primaryConcern
+                              ? "text-red-600"
+                              : "text-emerald-600"
+                          }`}
+                        >
+                          {result.primaryConcern ||
+                            "None (All checks passed)"}
                         </span>
                       </li>
                     </ul>
                   </div>
 
                   {/* AI Verification Breakdown */}
+
                   <div>
                     <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3 flex items-center gap-1.5">
-                      <Layers className="w-4 h-4 text-indigo-600" /> Security Inspection
+                      <Layers className="w-4 h-4 text-indigo-600" />
+                      Security Inspection
                     </h4>
+
                     <ul className="space-y-2.5 text-sm">
                       <li className="flex justify-between items-center border-b border-slate-100 pb-2">
-                        <span className="text-slate-500">MRZ Checksum:</span>
-                        <span className="flex items-center gap-1 font-semibold text-emerald-600">
-                          <CheckCircle className="w-4 h-4" /> Valid
+                        <span className="text-slate-500">
+                          MRZ Checksum:
                         </span>
-                      </li>
-                      <li className="flex justify-between items-center border-b border-slate-100 pb-2">
-                        <span className="text-slate-500">Face Verification:</span>
-                        {faceVerificationData?.success &&
-                        typeof faceVerificationData?.similarity === "number" ? (
-                          <span
-                            className={`font-bold text-sm ${
-                              faceVerificationData.match
-                                ? "text-emerald-600"
-                                : "text-red-600"
-                            }`}
-                          >
-                            {Math.round(faceVerificationData.similarity * 100)}%
-                            {" "}
-                            {faceVerificationData.match ? "Match" : "No Match"}
+
+                        {parsedOcrData?.mrzValid === true ? (
+                          <span className="flex items-center gap-1 font-semibold text-emerald-600">
+                            <CheckCircle className="w-4 h-4" />
+                            Valid
+                          </span>
+                        ) : parsedOcrData?.mrzValid === false ? (
+                          <span className="flex items-center gap-1 font-semibold text-red-600">
+                            <AlertTriangle className="w-4 h-4" />
+                            Invalid
                           </span>
                         ) : (
                           <span className="font-semibold text-slate-500">
@@ -684,15 +1033,52 @@ export default function NewScreeningPage() {
                           </span>
                         )}
                       </li>
+
                       <li className="flex justify-between items-center border-b border-slate-100 pb-2">
-                        <span className="text-slate-500">Tampering Detection:</span>
-                        {result.isTampered || result.riskLevel === "HIGH" ? (
+                        <span className="text-slate-500">
+                          Face Verification:
+                        </span>
+
+                        {faceVerificationData?.success &&
+                        typeof faceVerificationData?.similarity ===
+                          "number" ? (
+                          <span
+                            className={`font-bold text-sm ${
+                              faceVerificationData.match
+                                ? "text-emerald-600"
+                                : "text-red-600"
+                            }`}
+                          >
+                            {Math.round(
+                              faceVerificationData.similarity *
+                                100
+                            )}
+                            %{" "}
+                            {faceVerificationData.match
+                              ? "Match"
+                              : "No Match"}
+                          </span>
+                        ) : (
+                          <span className="font-semibold text-slate-500">
+                            Not Available
+                          </span>
+                        )}
+                      </li>
+
+                      <li className="flex justify-between items-center border-b border-slate-100 pb-2">
+                        <span className="text-slate-500">
+                          Tampering Detection:
+                        </span>
+
+                        {result.isTampered === true ? (
                           <span className="flex items-center gap-1 font-semibold text-red-600">
-                            <AlertTriangle className="w-4 h-4" /> Forgery Detected
+                            <AlertTriangle className="w-4 h-4" />
+                            Forgery Detected
                           </span>
                         ) : (
                           <span className="flex items-center gap-1 font-semibold text-emerald-600">
-                            <CheckCircle className="w-4 h-4" /> Authentic (Clean)
+                            <CheckCircle className="w-4 h-4" />
+                            Authentic (Clean)
                           </span>
                         )}
                       </li>
@@ -701,70 +1087,123 @@ export default function NewScreeningPage() {
                 </div>
 
                 {/* Tampering Detection Deep-Dive Card */}
+
                 <div className="border-t border-slate-100 p-6 bg-slate-50/50">
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-2">
                       <Crosshair className="w-4 h-4 text-purple-600" />
+
                       <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider">
                         Tampering Analysis & Region Localization
                       </h4>
                     </div>
+
                     {tamperingData?.confidence && (
                       <span className="text-xs font-semibold px-2 py-0.5 rounded bg-purple-100 text-purple-700">
-                        Confidence: {(tamperingData.confidence * 100).toFixed(1)}%
+                        Detection Confidence:{" "}
+                        {(tamperingData.confidence * 100).toFixed(1)}%
                       </span>
                     )}
                   </div>
 
                   <div className="grid sm:grid-cols-3 gap-3 text-sm">
                     <div className="bg-white p-3.5 rounded-xl border border-slate-200">
-                      <div className="text-xs text-slate-500 font-medium">Model 1: Verdict</div>
-                      <div className={`font-bold mt-1 ${result.isTampered || tamperingData?.tampered ? "text-red-600" : "text-emerald-600"}`}>
-                        {result.isTampered || tamperingData?.tampered ? "Tampered / Manipulated" : "Authentic Document"}
+                      <div className="text-xs text-slate-500 font-medium">
+                        Document Status
+                      </div>
+
+                      <div
+                        className={`font-bold mt-1 ${
+                          result.isTampered ||
+                          tamperingData?.tampered
+                            ? "text-red-600"
+                            : "text-emerald-600"
+                        }`}
+                      >
+                        {result.isTampered ||
+                        tamperingData?.tampered
+                          ? "Tampering Detected"
+                          : "Authentic Document"}
                       </div>
                     </div>
+
                     <div className="bg-white p-3.5 rounded-xl border border-slate-200">
-                      <div className="text-xs text-slate-500 font-medium">Model 2: Localized ROI</div>
+                      <div className="text-xs text-slate-500 font-medium">
+                        Suspicious Region
+                      </div>
+
                       <div className="font-semibold text-slate-800 mt-1">
-                        {tamperingData?.region ? `[${tamperingData.region.join(", ")}]` : "No Anomaly Bounding Box"}
+                        {tamperingData?.region
+                          ? `[${tamperingData.region.join(
+                              ", "
+                            )}]`
+                          : "No anomaly detected"}
                       </div>
                     </div>
+
                     <div className="bg-white p-3.5 rounded-xl border border-slate-200">
-                      <div className="text-xs text-slate-500 font-medium">Model 3: Forgery Class</div>
+                      <div className="text-xs text-slate-500 font-medium">
+                        Tampering Type
+                      </div>
+
                       <div className="font-semibold text-slate-800 mt-1">
-                        {result.tamperingType || tamperingData?.tampering_type || "None"}
+                        {result.tamperingType ||
+                          tamperingData?.tampering_type ||
+                          "None detected"}
                       </div>
                     </div>
                   </div>
 
                   {/* Visual Document ROI Highlight if Tampered */}
-                  {imagePreview && (result.isTampered || tamperingData?.tampered) && (
-                    <div className="mt-4 p-3 bg-red-50/50 border border-red-200 rounded-xl flex items-center gap-4">
-                      <div className="relative w-24 h-16 rounded-lg overflow-hidden border border-red-300 flex-shrink-0">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={imagePreview} alt="ROI" className="w-full h-full object-cover" />
-                        <div className="absolute inset-1 border-2 border-dashed border-red-500 bg-red-500/20 rounded"></div>
-                      </div>
-                      <div className="text-xs">
-                        <div className="font-bold text-red-800 flex items-center gap-1">
-                          <AlertTriangle className="w-3.5 h-3.5 text-red-600" />
-                          Suspicious Region Detected
+
+                  {imagePreview &&
+                    (result.isTampered ||
+                      tamperingData?.tampered) && (
+                      <div className="mt-4 p-3 bg-red-50/50 border border-red-200 rounded-xl flex items-center gap-4">
+                        <div className="relative w-24 h-16 rounded-lg overflow-hidden border border-red-300 flex-shrink-0">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={imagePreview}
+                            alt="ROI"
+                            className="w-full h-full object-cover"
+                          />
+
+                          <div className="absolute inset-1 border-2 border-dashed border-red-500 bg-red-500/20 rounded"></div>
                         </div>
-                        <p className="text-red-600 mt-0.5">
-                          Localized altered pixels detected in bio-data sector. Recommend manual forensic microscope review.
-                        </p>
+
+                        <div className="text-xs">
+                          <div className="font-bold text-red-800 flex items-center gap-1">
+                            <AlertTriangle className="w-3.5 h-3.5 text-red-600" />
+
+                            Suspicious Region Detected
+                          </div>
+
+                          <p className="text-red-600 mt-0.5">
+                            Localized altered pixels detected in
+                            bio-data sector. Recommend manual
+                            forensic microscope review.
+                          </p>
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    )}
                 </div>
               </div>
 
               {/* Actions */}
+
               <div className="flex justify-center gap-4 pt-2">
-                <Button variant="outline" onClick={() => setStep("UPLOAD")} className="h-11 px-6">
+                <Button
+                  variant="outline"
+                  onClick={() => setStep("UPLOAD")}
+                  className="h-11 px-6"
+                >
                   Start Another Screening
                 </Button>
-                <Button onClick={() => router.push("/dashboard")} className="bg-blue-600 hover:bg-blue-700 h-11 px-6">
+
+                <Button
+                  onClick={() => router.push("/dashboard")}
+                  className="bg-blue-600 hover:bg-blue-700 h-11 px-6"
+                >
                   Return to Dashboard
                 </Button>
               </div>
@@ -775,5 +1214,3 @@ export default function NewScreeningPage() {
     </div>
   );
 }
-
-

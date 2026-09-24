@@ -14,6 +14,7 @@ export async function GET() {
 
     if (sessionToken) {
       const payload = await decrypt(sessionToken);
+
       if (payload?.name) {
         officerName = payload.name as string;
       }
@@ -21,7 +22,9 @@ export async function GET() {
 
     await connectDB();
 
-    // Ensure database contains realistic border screening records
+    // Keep the existing dashboard seed for now.
+    // We will remove/replace this later when we make dashboard statistics
+    // completely database-driven.
     await ensureDatabaseSeeded(officerName);
 
     const rawScreenings = await Screening.find()
@@ -34,7 +37,6 @@ export async function GET() {
       id: s._id ? s._id.toString() : s.screeningId,
     }));
 
-    // Extract Priority Cases (High / Medium risk or Pending Review)
     const priorityCases = allScreenings
       .filter(
         (s) =>
@@ -44,16 +46,18 @@ export async function GET() {
       )
       .slice(0, 3);
 
-    // Recent Screenings list
     const recentScreenings = allScreenings.slice(0, 8);
 
-    // Dynamic stats derived from authentic records + checkpoint aggregation
+    // Existing dashboard statistics.
+    // We will make these fully database-driven in a later step.
     const totalCount = 1248 + (allScreenings.length - 8);
+
     const highRiskCount =
       18 +
       allScreenings.filter(
         (s) => s.riskLevel === "HIGH" && !["SCR-10482"].includes(s.screeningId)
       ).length;
+
     const mediumRiskCount =
       46 +
       allScreenings.filter(
@@ -61,6 +65,7 @@ export async function GET() {
           s.riskLevel === "MEDIUM" &&
           !["SCR-10477", "SCR-10465", "SCR-10479"].includes(s.screeningId)
       ).length;
+
     const lowRiskCount = totalCount - (highRiskCount + mediumRiskCount);
 
     const stats = {
@@ -69,6 +74,7 @@ export async function GET() {
       highRisk: highRiskCount,
       mediumRisk: mediumRiskCount,
       lowRisk: lowRiskCount,
+
       activityData: [
         { name: "7 Days Ago", screenings: 100, highRisk: 14 },
         { name: "6 Days Ago", screenings: 210, highRisk: 22 },
@@ -76,8 +82,13 @@ export async function GET() {
         { name: "4 Days Ago", screenings: 190, highRisk: 21 },
         { name: "3 Days Ago", screenings: 310, highRisk: 29 },
         { name: "2 Days Ago", screenings: 180, highRisk: 18 },
-        { name: "Today", screenings: 120 + allScreenings.length - 8, highRisk: 11 },
+        {
+          name: "Today",
+          screenings: 120 + allScreenings.length - 8,
+          highRisk: 11,
+        },
       ],
+
       riskDistribution: [
         {
           name: "High Risk",
@@ -108,34 +119,218 @@ export async function GET() {
     });
   } catch (error) {
     console.error("Screenings GET error:", error);
-    return NextResponse.json({ success: false }, { status: 500 });
+
+    return NextResponse.json(
+      { success: false },
+      { status: 500 }
+    );
   }
 }
 
-// Shape of the real result returned by ai-service's /ocr endpoint (proxied
-// through /api/ocr) — see ai-service/main.py's OCRResponse model.
+
+// -----------------------------------------------------------------------------
+// AI result types
+// -----------------------------------------------------------------------------
+
 interface OcrResult {
   name?: string | null;
   passport_no?: string | null;
   dob?: string | null;
   expiry?: string | null;
   nationality?: string | null;
+  gender?: string | null;
   confidence?: number;
+
   mrz?: {
     valid_checksum?: boolean;
     raw_lines?: string[];
   };
+
+  printed_vs_mrz_match?: boolean;
 }
+
+interface TamperingResult {
+  tampered?: boolean;
+  confidence?: number;
+  tampering_type?: string | null;
+  region?: number[] | null;
+  method?: string | null;
+}
+
+interface FaceVerificationResult {
+  similarity?: number;
+  match?: boolean;
+  doc_face_detected?: boolean;
+  live_face_detected?: boolean;
+}
+
+
+// -----------------------------------------------------------------------------
+// Risk calculation
+// -----------------------------------------------------------------------------
+//
+// IMPORTANT:
+// This is application-level risk scoring for our screening demo.
+// It is NOT an official government/border-security risk standard.
+//
+// The score combines independent screening signals:
+//
+// Face mismatch       +60
+// Tampering detected  +30
+// MRZ invalid         +20
+// Name mismatch       +15
+// Expired document    +20
+//
+// Maximum = 100
+//
+// Risk bands:
+//
+// 0 - 20   LOW
+// 21 - 50  MEDIUM
+// 51 - 100 HIGH
+// -----------------------------------------------------------------------------
+
+function calculateRiskScore({
+  faceResult,
+  tamperingResult,
+  ocrResult,
+}: {
+  faceResult: FaceVerificationResult | null;
+  tamperingResult: TamperingResult | null;
+  ocrResult: OcrResult | null;
+}) {
+  let riskScore = 0;
+
+  const concerns: string[] = [];
+
+  // ---------------------------------------------------------
+  // 1. Face verification
+  // ---------------------------------------------------------
+
+  if (faceResult) {
+    const faceDetected =
+      faceResult.doc_face_detected === true &&
+      faceResult.live_face_detected === true;
+
+    if (!faceDetected) {
+      riskScore += 60;
+      concerns.push("Face could not be verified");
+    } else if (faceResult.match !== true) {
+      riskScore += 60;
+      concerns.push("Face mismatch with document photo");
+    }
+  }
+
+  // ---------------------------------------------------------
+  // 2. Tampering detection
+  // ---------------------------------------------------------
+
+  if (tamperingResult?.tampered === true) {
+    riskScore += 30;
+
+    const type =
+      tamperingResult.tampering_type &&
+      tamperingResult.tampering_type !== "None"
+        ? tamperingResult.tampering_type
+        : "Visual Forgery";
+
+    concerns.push(`Document tampering detected (${type})`);
+  }
+
+  // ---------------------------------------------------------
+  // 3. MRZ checksum
+  // ---------------------------------------------------------
+
+  const hasChecksumError =
+    ocrResult?.mrz?.valid_checksum === false;
+
+  if (hasChecksumError) {
+    riskScore += 20;
+    concerns.push("MRZ checksum validation failure");
+  }
+
+  // ---------------------------------------------------------
+  // 4. Printed data vs MRZ
+  // ---------------------------------------------------------
+
+  const hasNameMismatch =
+    ocrResult?.printed_vs_mrz_match === false;
+
+  if (hasNameMismatch) {
+    riskScore += 15;
+    concerns.push("Bio-page name vs MRZ mismatch");
+  }
+
+  // ---------------------------------------------------------
+  // 5. Passport expiry
+  // ---------------------------------------------------------
+
+  if (ocrResult?.expiry) {
+    const expiryDate = new Date(ocrResult.expiry);
+
+    if (
+      !Number.isNaN(expiryDate.getTime()) &&
+      expiryDate.getTime() < Date.now()
+    ) {
+      riskScore += 20;
+      concerns.push("Passport has expired");
+    }
+  }
+
+  // Never allow score above 100.
+  riskScore = Math.min(100, riskScore);
+
+  let riskLevel: "LOW" | "MEDIUM" | "HIGH";
+
+  if (riskScore <= 20) {
+    riskLevel = "LOW";
+  } else if (riskScore <= 50) {
+    riskLevel = "MEDIUM";
+  } else {
+    riskLevel = "HIGH";
+  }
+
+  // Critical verification failures should never be treated as cleared.
+  const criticalFailure =
+    faceResult?.match === false ||
+    faceResult?.doc_face_detected === false ||
+    faceResult?.live_face_detected === false ||
+    tamperingResult?.tampered === true ||
+    hasChecksumError ||
+    hasNameMismatch ||
+    concerns.includes("Passport has expired");
+
+  const status =
+    criticalFailure || riskLevel !== "LOW"
+      ? "PENDING REVIEW"
+      : "CLEARED";
+
+  return {
+    riskScore,
+    riskLevel,
+    status,
+    primaryConcern:
+      concerns.length > 0 ? concerns.join("; ") : null,
+  };
+}
+
+
+// -----------------------------------------------------------------------------
+// POST /api/screenings
+// -----------------------------------------------------------------------------
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
+
     const cookieStore = await cookies();
     const sessionToken = cookieStore.get("session")?.value;
+
     let officerName = "Authorized Officer";
 
     if (sessionToken) {
       const payload = await decrypt(sessionToken);
+
       if (payload?.name) {
         officerName = payload.name as string;
       }
@@ -143,126 +338,163 @@ export async function POST(request: Request) {
 
     await connectDB();
 
-    // Realistic document screening data generation based on passport standards, real OCR, and Tampering AI
-    const ocrResult = body.ocrResult;
-    const tamperingResult = body.tamperingResult;
-    
-    const docType = ocrResult ? (ocrResult.passport_no ? "Passport" : "ID Card") : (body.documentType || "Passport");
-    const passengerName = ocrResult ? (ocrResult.name || "Uploaded Document") : (body.name || "Rajesh Kumar");
+    // -------------------------------------------------------------------------
+    // Get real AI results sent by the frontend
+    // -------------------------------------------------------------------------
 
-    let isSuspicious = false;
-    let riskScore = 10;
-    let riskLevel = "LOW";
-    let status = "CLEARED";
-    let primaryConcern: string | null = null;
-    let finalOcrData: any = {};
-    let faceMatchScore = 95;
+    const ocrResult: OcrResult | null = body.ocrResult ?? null;
 
-    const isTampered = tamperingResult?.tampered ?? false;
-    const tamperingScore = tamperingResult ? Math.round(tamperingResult.confidence * 100) : null;
-    const tamperingType = tamperingResult?.tampering_type ?? null;
-    const tamperedRegion = tamperingResult?.region ? JSON.stringify(tamperingResult.region) : null;
+    const tamperingResult: TamperingResult | null =
+      body.tamperingResult ?? null;
 
-    if (ocrResult || tamperingResult) {
-      const hasChecksumError = ocrResult?.mrz && ocrResult.mrz.valid_checksum === false;
-      const hasNameMismatch = ocrResult?.printed_vs_mrz_match === false;
+    const faceVerificationResult: FaceVerificationResult | null =
+      body.faceVerificationResult ?? null;
 
-      isSuspicious = hasChecksumError || hasNameMismatch || isTampered;
 
-      if (isTampered) {
-        primaryConcern = `Document Tampering Detected (${tamperingType || "Visual Forgery"})`;
-        riskScore = Math.floor(88 + Math.random() * 10); // High risk
-        riskLevel = "HIGH";
-        status = "PENDING REVIEW";
-      } else if (hasChecksumError) {
-        primaryConcern = "MRZ checksum validation failure";
-        riskScore = Math.floor(82 + Math.random() * 12); // High risk
-        riskLevel = "HIGH";
-        status = "PENDING REVIEW";
-      } else if (hasNameMismatch) {
-        primaryConcern = "Bio-page name vs MRZ mismatch";
-        riskScore = Math.floor(70 + Math.random() * 10); // High risk
-        riskLevel = "HIGH";
-        status = "PENDING REVIEW";
-      } else {
-        // Safe document
-        riskScore = Math.floor(8 + Math.random() * 12); // low score
-        riskLevel = "LOW";
-        status = "CLEARED";
-      }
+    // -------------------------------------------------------------------------
+    // Determine document information
+    // -------------------------------------------------------------------------
 
-      finalOcrData = {
-        passportNo: ocrResult?.passport_no || `P${Math.floor(7000000 + Math.random() * 2999999)}`,
-        nationality: ocrResult?.nationality || "IND",
-        dob: ocrResult?.dob || "15/08/1990",
-        expiry: ocrResult?.expiry || "30/06/2030",
-        gender: ocrResult?.gender || "M",
-        mrzLine1: ocrResult?.mrz?.raw_lines?.[0] || "",
-        mrzLine2: ocrResult?.mrz?.raw_lines?.[1] || "",
-        mrzValid: ocrResult?.mrz?.valid_checksum ?? true,
-      };
+    const docType = ocrResult?.passport_no
+      ? "Passport"
+      : body.documentType || "Passport";
 
-      faceMatchScore = isSuspicious
-        ? Number((40 + Math.random() * 20).toFixed(1))
-        : Number((91 + Math.random() * 8).toFixed(1));
-    } else {
-      // Original mock/simulated logic
-      isSuspicious = body.isAnomaly ?? (Math.random() < 0.25); // 25% anomaly rate
-      riskScore = isSuspicious
-        ? Math.floor(65 + Math.random() * 25)
-        : Math.floor(5 + Math.random() * 20);
-      riskLevel = riskScore > 60 ? "HIGH" : riskScore > 30 ? "MEDIUM" : "LOW";
-      status = riskLevel === "LOW" ? "CLEARED" : "PENDING REVIEW";
+    const passengerName =
+      ocrResult?.name ||
+      body.name ||
+      "Uploaded Document";
 
-      const concerns = [
-        "Face mismatch with bio-chip photo",
-        "Tampered date of issue watermark",
-        "MRZ checksum validation failure",
-        "Microprint ink irregularity",
-      ];
 
-      primaryConcern = isSuspicious
-        ? concerns[Math.floor(Math.random() * concerns.length)]
-        : null;
+    // -------------------------------------------------------------------------
+    // Calculate risk from REAL AI results
+    // -------------------------------------------------------------------------
 
-      finalOcrData = {
-        passportNo: `P${Math.floor(7000000 + Math.random() * 2999999)}`,
-        nationality: body.nationality || "IND",
-        dob: body.dob || "15/08/1990",
-        expiry: body.expiry || "30/06/2030",
-        gender: body.gender || "M",
-        mrzLine1: `P<IND${passengerName.toUpperCase().replace(/\s+/g, "<")}<<<<<<<<<<<<<<<<<<`,
-        mrzLine2: `P79100418IND9008157M3006302<<<<<<<<<<<<<<6`,
-        mrzValid: !isSuspicious,
-      };
-
-      faceMatchScore = isSuspicious
-        ? Number((40 + Math.random() * 20).toFixed(1))
-        : Number((91 + Math.random() * 8).toFixed(1));
-    }
-
-    const screeningId = `SCR-${Math.floor(10483 + Math.random() * 500)}`;
-
-    const newScreening = await Screening.create({
-      screeningId,
-      documentType: docType,
-      name: passengerName,
+    const {
       riskScore,
       riskLevel,
       status,
-      officerId: officerName,
       primaryConcern,
+    } = calculateRiskScore({
+      faceResult: faceVerificationResult,
+      tamperingResult,
+      ocrResult,
+    });
+
+
+    // -------------------------------------------------------------------------
+    // Tampering information
+    // -------------------------------------------------------------------------
+
+    const isTampered =
+      tamperingResult?.tampered === true;
+
+    const tamperingScore =
+      typeof tamperingResult?.confidence === "number"
+        ? Math.round(tamperingResult.confidence * 100)
+        : null;
+
+    const tamperingType =
+      tamperingResult?.tampering_type ?? null;
+
+    const tamperedRegion =
+      tamperingResult?.region
+        ? JSON.stringify(tamperingResult.region)
+        : null;
+
+
+    // -------------------------------------------------------------------------
+    // Face similarity
+    // -------------------------------------------------------------------------
+    //
+    // IMPORTANT:
+    // This is the REAL ArcFace similarity returned by Python.
+    // We are no longer generating a random number.
+    // -------------------------------------------------------------------------
+
+    const faceMatchScore =
+      typeof faceVerificationResult?.similarity === "number"
+        ? Math.round(faceVerificationResult.similarity * 100)
+        : null;
+
+
+    // -------------------------------------------------------------------------
+    // OCR data
+    // -------------------------------------------------------------------------
+
+    const finalOcrData = {
+      passportNo: ocrResult?.passport_no ?? null,
+      nationality: ocrResult?.nationality ?? null,
+      dob: ocrResult?.dob ?? null,
+      expiry: ocrResult?.expiry ?? null,
+      gender: ocrResult?.gender ?? null,
+
+      mrzLine1:
+        ocrResult?.mrz?.raw_lines?.[0] ?? "",
+
+      mrzLine2:
+        ocrResult?.mrz?.raw_lines?.[1] ?? "",
+
+      mrzValid:
+        ocrResult?.mrz?.valid_checksum ?? null,
+
+      ocrConfidence:
+        typeof ocrResult?.confidence === "number"
+          ? ocrResult.confidence
+          : null,
+
+      printedVsMrzMatch:
+        ocrResult?.printed_vs_mrz_match ?? null,
+    };
+
+
+    // -------------------------------------------------------------------------
+    // Generate screening ID
+    // -------------------------------------------------------------------------
+    //
+    // Still generated here, but no random risk values are generated.
+    // -------------------------------------------------------------------------
+
+    const screeningId = `SCR-${Date.now()}`;
+
+
+    // -------------------------------------------------------------------------
+    // Save complete screening result to MongoDB
+    // -------------------------------------------------------------------------
+
+    const newScreening = await Screening.create({
+      screeningId,
+
+      documentType: docType,
+
+      name: passengerName,
+
+      riskScore,
+      riskLevel,
+      status,
+
+      officerId: officerName,
+
+      primaryConcern,
+
       ocrData: JSON.stringify(finalOcrData),
+
       faceMatchScore,
+
       tamperingScore,
       isTampered,
       tamperingType,
       tamperedRegion,
     });
 
-    const recipientEmail = process.env.GMAIL_USER || "dipikakumari0021@gmail.com";
 
-    // Send email notification asynchronously in background
+    // -------------------------------------------------------------------------
+    // Email notification
+    // -------------------------------------------------------------------------
+
+    const recipientEmail =
+      process.env.GMAIL_USER ||
+      "dipikakumari0021@gmail.com";
+
     if (recipientEmail) {
       if (riskLevel === "HIGH") {
         sendHighRiskAlert({
@@ -277,7 +509,12 @@ export async function POST(request: Request) {
           isTampered,
           tamperingType,
           timestamp: new Date(),
-        }).catch((err) => console.error("High risk email alert error:", err));
+        }).catch((err) =>
+          console.error(
+            "High risk email alert error:",
+            err
+          )
+        );
       } else {
         sendScreeningResult({
           to: recipientEmail,
@@ -289,13 +526,28 @@ export async function POST(request: Request) {
           riskLevel,
           status,
           timestamp: new Date(),
-        }).catch((err) => console.error("Screening result email error:", err));
+        }).catch((err) =>
+          console.error(
+            "Screening result email error:",
+            err
+          )
+        );
       }
     }
 
+
+    // -------------------------------------------------------------------------
+    // Return saved screening
+    // -------------------------------------------------------------------------
+
     return NextResponse.json(newScreening);
+
   } catch (error) {
     console.error("Screenings POST error:", error);
-    return NextResponse.json({ success: false }, { status: 500 });
+
+    return NextResponse.json(
+      { success: false },
+      { status: 500 }
+    );
   }
 }
