@@ -845,11 +845,11 @@ export default function NewScreeningPage() {
                   {isRealTampering ? (
                     <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-purple-50 border border-purple-200 text-purple-700 text-xs font-semibold">
                       <Zap className="w-3.5 h-3.5 text-purple-600" />
-                      3-Model Tampering Neural Net
+                      ELA Forensic Baseline
                     </span>
                   ) : (
                     <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 border border-slate-200 text-slate-700 text-xs font-semibold">
-                      Forensic Inspection Engine
+                      ELA Forensic Baseline
                     </span>
                   )}
                 </div>
@@ -983,8 +983,19 @@ export default function NewScreeningPage() {
                           {result.documentType}
                         </span>
                       </li>
+                    </ul>
+                  </div>
 
-                      <li className="flex justify-between border-b border-slate-100 pb-2">
+                  {/* AI Verification Breakdown */}
+
+                  <div>
+                    <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                      <Layers className="w-4 h-4 text-indigo-600" />
+                      Security Inspection
+                    </h4>
+
+                    <ul className="space-y-2.5 text-sm">
+                      <li className="flex justify-between items-center border-b border-slate-100 pb-2">
                         <span className="text-slate-500">
                           Primary Concern:
                         </span>
@@ -1000,18 +1011,7 @@ export default function NewScreeningPage() {
                             "None (All checks passed)"}
                         </span>
                       </li>
-                    </ul>
-                  </div>
 
-                  {/* AI Verification Breakdown */}
-
-                  <div>
-                    <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3 flex items-center gap-1.5">
-                      <Layers className="w-4 h-4 text-indigo-600" />
-                      Security Inspection
-                    </h4>
-
-                    <ul className="space-y-2.5 text-sm">
                       <li className="flex justify-between items-center border-b border-slate-100 pb-2">
                         <span className="text-slate-500">
                           MRZ Checksum:
@@ -1034,7 +1034,7 @@ export default function NewScreeningPage() {
                         )}
                       </li>
 
-                      <li className="flex justify-between items-center border-b border-slate-100 pb-2">
+<li className="flex justify-between items-center border-b border-slate-100 pb-2">
                         <span className="text-slate-500">
                           Face Verification:
                         </span>
@@ -1042,27 +1042,31 @@ export default function NewScreeningPage() {
                         {faceVerificationData?.success &&
                         typeof faceVerificationData?.similarity ===
                           "number" ? (
-                          <span
-                            className={`font-bold text-sm ${
-                              faceVerificationData.match
-                                ? "text-emerald-600"
-                                : "text-red-600"
-                            }`}
-                          >
-                            {Math.round(
-                              faceVerificationData.similarity *
-                                100
-                            )}
-                            %{" "}
-                            {faceVerificationData.match
-                              ? "Match"
-                              : "No Match"}
-                          </span>
-                        ) : (
-                          <span className="font-semibold text-slate-500">
-                            Not Available
-                          </span>
-                        )}
+                        <span
+                          className={`font-bold text-sm ${
+                            faceVerificationData.match
+                              ? "text-emerald-600"
+                              : "text-red-600"
+                          }`}
+                        >
+                          {Math.round(
+                            faceVerificationData.similarity *
+                              100
+                          )}
+                          %{" "}
+                          {faceVerificationData.match
+                            ? "Match"
+                            : "No Match"}
+                        </span>
+                      ) : faceVerificationData?.success === false ? (
+                        <span className="font-semibold text-amber-600">
+                          Selfie Required
+                        </span>
+                      ) : (
+                        <span className="font-semibold text-slate-500">
+                          Not Available
+                        </span>
+                      )}
                       </li>
 
                       <li className="flex justify-between items-center border-b border-slate-100 pb-2">
@@ -1100,8 +1104,10 @@ export default function NewScreeningPage() {
 
                     {tamperingData?.confidence && (
                       <span className="text-xs font-semibold px-2 py-0.5 rounded bg-purple-100 text-purple-700">
-                        ELA Analysis Confidence:{" "}
-                        {(tamperingData.confidence * 100).toFixed(1)}%
+                        ELA Forensic Result:{" "}
+                        {tamperingData.tampered
+                          ? "Anomaly detected"
+                          : "No significant anomaly detected"}
                       </span>
                     )}
                   </div>
@@ -1122,36 +1128,40 @@ export default function NewScreeningPage() {
                       >
                         {result.isTampered ||
                         tamperingData?.tampered
-                          ? "Tampering Detected"
-                          : "Authentic Document"}
+                          ? "ELA Anomalies Detected"
+                          : "No ELA Anomalies Detected"}
                       </div>
                     </div>
 
-                    <div className="bg-white p-3.5 rounded-xl border border-slate-200">
-                      <div className="text-xs text-slate-500 font-medium">
-                        Suspicious Region
-                      </div>
+                    {(result.isTampered || tamperingData?.tampered) && (
+                      <>
+                        <div className="bg-white p-3.5 rounded-xl border border-slate-200">
+                          <div className="text-xs text-slate-500 font-medium">
+                            Suspicious Region
+                          </div>
 
-                      <div className="font-semibold text-slate-800 mt-1">
-                        {tamperingData?.region
-                          ? `[${tamperingData.region.join(
-                              ", "
-                            )}]`
-                          : "No anomaly detected"}
-                      </div>
-                    </div>
+                          <div className="font-semibold text-slate-800 mt-1">
+                            {tamperingData?.region
+                              ? `[${tamperingData.region.join(
+                                  ", "
+                                )}]`
+                              : "No anomaly detected"}
+                          </div>
+                        </div>
 
-                    <div className="bg-white p-3.5 rounded-xl border border-slate-200">
-                      <div className="text-xs text-slate-500 font-medium">
-                        Tampering Type
-                      </div>
+                        <div className="bg-white p-3.5 rounded-xl border border-slate-200">
+                          <div className="text-xs text-slate-500 font-medium">
+                            Tampering Type
+                          </div>
 
-                      <div className="font-semibold text-slate-800 mt-1">
-                        {result.tamperingType ||
-                          tamperingData?.tampering_type ||
-                          "None detected"}
-                      </div>
-                    </div>
+                          <div className="font-semibold text-slate-800 mt-1">
+                            {result.tamperingType ||
+                              tamperingData?.tampering_type ||
+                              "None detected"}
+                          </div>
+                        </div>
+                      </>
+                    )}
                   </div>
 
                   {/* Visual Document ROI Highlight if Tampered */}
