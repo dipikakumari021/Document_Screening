@@ -57,40 +57,24 @@ export async function POST(request: Request) {
       );
     }
 
-    // Attempt to call the Python AI Service /tampering endpoint
-    try {
-      const aiResponse = await fetch(`${AI_SERVICE_URL}/tampering`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ passport_image_base64: passportImageBase64 }),
-        signal: AbortSignal.timeout(15_000),
-      });
+    const aiResponse = await fetch(`${AI_SERVICE_URL}/tampering`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ passport_image_base64: passportImageBase64 }),
+      signal: AbortSignal.timeout(30_000),
+    });
 
-      if (aiResponse.ok) {
-        const tamperingResult = await aiResponse.json();
-        return NextResponse.json({ success: true, tampering: tamperingResult, isLiveService: true });
-      }
-    } catch (fetchError) {
-      console.warn("Could not connect to Python AI Service for tampering detection, using local forensic simulation:", fetchError);
+    if (!aiResponse.ok) {
+      const errorText = await aiResponse.text();
+      console.error("AI tampering service error:", aiResponse.status, errorText);
+      return NextResponse.json(
+        { success: false, error: "Tampering detection service unavailable" },
+        { status: 503 }
+      );
     }
 
-    // Fallback: Smart simulated forensic response if Python service is not running locally
-    // Provides consistent experience during local frontend testing
-    const isTamperedSim = Math.random() < 0.2; // 20% random anomaly for demo if offline
-    const simulatedResult = {
-      tampered: isTamperedSim,
-      confidence: isTamperedSim ? 0.91 : 0.98,
-      tampering_type: isTamperedSim ? "Copy-Move / Font Splicing" : "None",
-      region: isTamperedSim ? [180, 120, 260, 420] : null,
-      inference_time_ms: 124.5,
-      method: "Simulated Forensic Baseline (AI Service Offline)",
-    };
-
-    return NextResponse.json({
-      success: true,
-      tampering: simulatedResult,
-      isLiveService: false,
-    });
+    const tamperingResult = await aiResponse.json();
+    return NextResponse.json({ success: true, tampering: tamperingResult, isLiveService: true });
   } catch (error) {
     console.error("Tampering proxy error:", error);
     return NextResponse.json(

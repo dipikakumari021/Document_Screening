@@ -1100,7 +1100,7 @@ export default function NewScreeningPage() {
 
                     {tamperingData?.confidence && (
                       <span className="text-xs font-semibold px-2 py-0.5 rounded bg-purple-100 text-purple-700">
-                        Detection Confidence:{" "}
+                        ELA Analysis Confidence:{" "}
                         {(tamperingData.confidence * 100).toFixed(1)}%
                       </span>
                     )}

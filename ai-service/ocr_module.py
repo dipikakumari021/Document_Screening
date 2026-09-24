@@ -557,6 +557,7 @@ def run_ocr(passport_image_b64: str) -> dict:
         "dob": fields.get("dob"),
         "expiry": fields.get("expiry"),
         "nationality": fields.get("nationality"),
+        "gender": fields.get("sex"),
         "confidence": round(
             overall_confidence,
             3,

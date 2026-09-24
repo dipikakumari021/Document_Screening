@@ -73,6 +73,7 @@ class OCRResponse(BaseModel):
     dob: str | None
     expiry: str | None
     nationality: str | None
+    gender: str | None = None
     confidence: float
     mrz: dict
     printed_vs_mrz_match: bool
