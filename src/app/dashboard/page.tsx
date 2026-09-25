@@ -37,15 +37,24 @@ export default function DashboardPage() {
   const [selectedCase, setSelectedCase] = useState<any>(null);
 
   const fetchDashboardData = () => {
-    fetch("/api/screenings")
-      .then((res) => res.json())
+    fetch("/api/dashboard/stats")
+      .then((res) => {
+        if (!res.ok) {
+          throw new Error("Failed to load dashboard data");
+        }
+        return res.json();
+      })
       .then((d) => {
+        if (d.success === false) {
+          throw new Error(d.error || "Failed to load dashboard data");
+        }
         setData(d);
         setLoading(false);
       })
       .catch((err) => {
         console.error(err);
         setLoading(false);
+        setData({ error: err.message });
       });
   };
 
@@ -53,7 +62,7 @@ export default function DashboardPage() {
     fetchDashboardData();
   }, []);
 
-  if (loading || !data) {
+  if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="flex flex-col items-center gap-4">
@@ -66,7 +75,35 @@ export default function DashboardPage() {
     );
   }
 
-  const { stats, screenings, priorityCases, currentOfficer } = data;
+  if (data?.error) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="flex flex-col items-center gap-4 text-center">
+          <div className="w-12 h-12 rounded-full bg-red-50 flex items-center justify-center">
+            <AlertTriangle className="w-6 h-6 text-red-600" />
+          </div>
+          <p className="text-sm font-medium text-slate-700">
+            Unable to load dashboard data
+          </p>
+          <p className="text-xs text-slate-500 max-w-sm">
+            {data.error}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  const totalScreenings = data.totalScreenings ?? 0;
+  const todayScreenings = data.todayScreenings ?? 0;
+  const todayGrowth = data.todayGrowth ?? null;
+  const highRisk = data.risk?.high ?? 0;
+  const mediumRisk = data.risk?.medium ?? 0;
+  const lowRisk = data.risk?.low ?? 0;
+  const activityData = data.activity ?? [];
+  const riskDistribution = data.riskDistribution ?? [];
+  const recentScreenings = data.recentScreenings ?? [];
+  const priorityCases = data.priorityCases ?? [];
+  const currentOfficer = data.currentOfficer ?? "Officer";
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto font-sans">
@@ -98,10 +135,10 @@ export default function DashboardPage() {
                   Total Screenings
                 </p>
                 <h3 className="text-3xl font-black text-slate-900">
-                  {stats.total.toLocaleString()}
+                  {totalScreenings.toLocaleString()}
                 </h3>
                 <p className="text-xs font-semibold text-emerald-600 mt-2 flex items-center gap-1">
-                  Today {stats.todayGrowth} ↗
+                  Today {todayScreenings} {todayGrowth ? `({todayGrowth} vs yesterday)` : ""}
                 </p>
               </div>
               <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
@@ -120,7 +157,7 @@ export default function DashboardPage() {
                   High Risk
                 </p>
                 <h3 className="text-3xl font-black text-red-600">
-                  {stats.highRisk}
+                  {highRisk}
                 </h3>
                 <p className="text-xs font-semibold text-red-600 mt-2">
                   Requires attention
@@ -142,7 +179,7 @@ export default function DashboardPage() {
                   Medium Risk
                 </p>
                 <h3 className="text-3xl font-black text-amber-500">
-                  {stats.mediumRisk}
+                  {mediumRisk}
                 </h3>
                 <p className="text-xs font-semibold text-amber-600 mt-2">
                   Under review
@@ -164,7 +201,7 @@ export default function DashboardPage() {
                   Low Risk
                 </p>
                 <h3 className="text-3xl font-black text-emerald-600">
-                  {stats.lowRisk.toLocaleString()}
+                  {lowRisk.toLocaleString()}
                 </h3>
                 <p className="text-xs font-semibold text-emerald-600 mt-2">
                   Cleared
@@ -196,7 +233,7 @@ export default function DashboardPage() {
             <div className="h-64 w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart
-                  data={stats.activityData}
+                  data={activityData.map((d: any) => ({ name: d.label, screenings: d.total, highRisk: d.highRisk }))}
                   margin={{ top: 10, right: 20, bottom: 5, left: 0 }}
                 >
                   <CartesianGrid stroke="#f1f5f9" strokeDasharray="3 3" vertical={false} />
@@ -267,13 +304,13 @@ export default function DashboardPage() {
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
-                    data={stats.riskDistribution}
+                    data={riskDistribution}
                     innerRadius={55}
                     outerRadius={75}
                     paddingAngle={4}
                     dataKey="value"
                   >
-                    {stats.riskDistribution.map((entry: any, index: number) => (
+                    {riskDistribution.map((entry: any, index: number) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
                   </Pie>
@@ -282,7 +319,7 @@ export default function DashboardPage() {
               </ResponsiveContainer>
               <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
                 <span className="text-2xl font-black text-slate-800 leading-none">
-                  {stats.total.toLocaleString()}
+                  {totalScreenings.toLocaleString()}
                 </span>
                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
                   Total
@@ -291,7 +328,7 @@ export default function DashboardPage() {
             </div>
 
             <div className="w-full mt-4 space-y-2 border-t border-slate-100 pt-3">
-              {stats.riskDistribution.map((item: any, i: number) => (
+              {riskDistribution.map((item: any, i: number) => (
                 <div key={i} className="flex items-center justify-between text-xs">
                   <div className="flex items-center gap-2">
                     <span
@@ -440,7 +477,7 @@ export default function DashboardPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 font-medium">
-              {screenings.map((s: any) => (
+              {recentScreenings.map((s: any) => (
                 <tr key={s.id} className="hover:bg-slate-50 transition-colors">
                   <td className="px-6 py-4 font-mono font-bold text-slate-900">
                     {s.screeningId}

@@ -3,7 +3,6 @@ import { connectDB } from "@/lib/db";
 import { Screening } from "@/models/Screening";
 import { cookies } from "next/headers";
 import { decrypt } from "@/lib/auth";
-import { ensureDatabaseSeeded } from "@/lib/seed";
 import { sendHighRiskAlert, sendScreeningResult } from "@/lib/email";
 
 export async function GET() {
@@ -22,93 +21,132 @@ export async function GET() {
 
     await connectDB();
 
-    // Keep the existing dashboard seed for now.
-    // We will remove/replace this later when we make dashboard statistics
-    // completely database-driven.
-    await ensureDatabaseSeeded(officerName);
+    const now = new Date();
+    const startToday = new Date(now);
+    startToday.setHours(0, 0, 0, 0);
+    const startTomorrow = new Date(startToday);
+    startTomorrow.setDate(startTomorrow.getDate() + 1);
+    const startYesterday = new Date(startToday);
+    startYesterday.setDate(startYesterday.getDate() - 1);
+    const endYesterday = new Date(startToday);
+    endYesterday.setMilliseconds(-1);
+    const sevenDaysAgo = new Date(startToday);
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
 
-    const rawScreenings = await Screening.find()
-      .sort({ time: -1 })
-      .limit(50)
-      .lean();
+    const [
+      totalScreenings,
+      todayScreenings,
+      yesterdayScreenings,
+      riskAgg,
+      statusAgg,
+      activityAgg,
+      recentScreeningsRaw,
+      priorityCasesRaw,
+    ] = await Promise.all([
+      Screening.countDocuments({}),
+      Screening.countDocuments({ time: { $gte: startToday, $lt: startTomorrow } }),
+      Screening.countDocuments({ time: { $gte: startYesterday, $lte: endYesterday } }),
+      Screening.aggregate([
+        { $group: { _id: "$riskLevel", count: { $sum: 1 } } },
+      ]),
+      Screening.aggregate([
+        { $group: { _id: "$status", count: { $sum: 1 } } },
+      ]),
+      Screening.aggregate([
+        { $match: { time: { $gte: sevenDaysAgo } } },
+        {
+          $group: {
+            _id: { $dateToString: { format: "%Y-%m-%d", date: "$time" } },
+            total: { $sum: 1 },
+            highRisk: {
+              $sum: { $cond: [{ $eq: ["$riskLevel", "HIGH"] }, 1, 0] },
+            },
+          },
+        },
+        { $sort: { _id: 1 } },
+      ]),
+      Screening.find()
+        .sort({ time: -1 })
+        .limit(10)
+        .lean(),
+      Screening.find({
+        $or: [
+          { status: "PENDING REVIEW" },
+          { riskLevel: "HIGH" },
+          { riskLevel: "MEDIUM" },
+        ],
+      })
+        .sort({ time: -1 })
+        .limit(3)
+        .lean(),
+    ]);
 
-    const allScreenings = rawScreenings.map((s: any) => ({
+    const riskMap = { LOW: 0, MEDIUM: 0, HIGH: 0 };
+    riskAgg.forEach((r) => {
+      if (r._id in riskMap) {
+        riskMap[r._id as keyof typeof riskMap] = r.count;
+      }
+    });
+
+    const statusMap: Record<string, number> = {};
+    statusAgg.forEach((s) => {
+      statusMap[s._id] = s.count;
+    });
+
+    const activityMap = new Map<string, { total: number; highRisk: number }>();
+    activityAgg.forEach((a) => {
+      activityMap.set(a._id, { total: a.total, highRisk: a.highRisk });
+    });
+
+    const activityData: Array<{ name: string; screenings: number; highRisk: number }> = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
+      const key = d.toISOString().split("T")[0];
+      const data = activityMap.get(key) || { total: 0, highRisk: 0 };
+      activityData.push({
+        name: d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }),
+        screenings: data.total,
+        highRisk: data.highRisk,
+      });
+    }
+
+    let todayGrowth: string | null = null;
+    if (yesterdayScreenings > 0) {
+      const pct = ((todayScreenings - yesterdayScreenings) / yesterdayScreenings) * 100;
+      const sign = pct >= 0 ? "+" : "";
+      todayGrowth = `${sign}${pct.toFixed(0)}%`;
+    }
+
+    const recentScreenings = recentScreeningsRaw.map((s: any) => ({
       ...s,
       id: s._id ? s._id.toString() : s.screeningId,
     }));
 
-    const priorityCases = allScreenings
-      .filter(
-        (s) =>
-          s.status === "PENDING REVIEW" ||
-          s.riskLevel === "HIGH" ||
-          s.riskLevel === "MEDIUM"
-      )
-      .slice(0, 3);
+    const priorityCases = priorityCasesRaw.map((s: any) => ({
+      ...s,
+      id: s._id ? s._id.toString() : s.screeningId,
+    }));
 
-    const recentScreenings = allScreenings.slice(0, 8);
+    const riskDistribution = [
+      { name: "High Risk", value: riskMap.HIGH, color: "#ef4444" },
+      { name: "Medium Risk", value: riskMap.MEDIUM, color: "#f59e0b" },
+      { name: "Low Risk", value: riskMap.LOW, color: "#22c55e" },
+    ];
 
-    // Existing dashboard statistics.
-    // We will make these fully database-driven in a later step.
-    const totalCount = 1248 + (allScreenings.length - 8);
-
-    const highRiskCount =
-      18 +
-      allScreenings.filter(
-        (s) => s.riskLevel === "HIGH" && !["SCR-10482"].includes(s.screeningId)
-      ).length;
-
-    const mediumRiskCount =
-      46 +
-      allScreenings.filter(
-        (s) =>
-          s.riskLevel === "MEDIUM" &&
-          !["SCR-10477", "SCR-10465", "SCR-10479"].includes(s.screeningId)
-      ).length;
-
-    const lowRiskCount = totalCount - (highRiskCount + mediumRiskCount);
+    const totalWithRisk = riskMap.LOW + riskMap.MEDIUM + riskMap.HIGH;
+    const riskDistributionWithPct = riskDistribution.map((r) => ({
+      ...r,
+      percentage: totalWithRisk > 0 ? ((r.value / totalWithRisk) * 100).toFixed(1) : "0.0",
+    }));
 
     const stats = {
-      total: totalCount,
-      todayGrowth: "+12%",
-      highRisk: highRiskCount,
-      mediumRisk: mediumRiskCount,
-      lowRisk: lowRiskCount,
-
-      activityData: [
-        { name: "7 Days Ago", screenings: 100, highRisk: 14 },
-        { name: "6 Days Ago", screenings: 210, highRisk: 22 },
-        { name: "5 Days Ago", screenings: 120, highRisk: 16 },
-        { name: "4 Days Ago", screenings: 190, highRisk: 21 },
-        { name: "3 Days Ago", screenings: 310, highRisk: 29 },
-        { name: "2 Days Ago", screenings: 180, highRisk: 18 },
-        {
-          name: "Today",
-          screenings: 120 + allScreenings.length - 8,
-          highRisk: 11,
-        },
-      ],
-
-      riskDistribution: [
-        {
-          name: "High Risk",
-          value: highRiskCount,
-          percentage: ((highRiskCount / totalCount) * 100).toFixed(1),
-          color: "#ef4444",
-        },
-        {
-          name: "Medium Risk",
-          value: mediumRiskCount,
-          percentage: ((mediumRiskCount / totalCount) * 100).toFixed(1),
-          color: "#f59e0b",
-        },
-        {
-          name: "Low Risk",
-          value: lowRiskCount,
-          percentage: ((lowRiskCount / totalCount) * 100).toFixed(1),
-          color: "#22c55e",
-        },
-      ],
+      total: totalScreenings,
+      todayGrowth: todayGrowth || "+0%",
+      highRisk: riskMap.HIGH,
+      mediumRisk: riskMap.MEDIUM,
+      lowRisk: riskMap.LOW,
+      activityData,
+      riskDistribution: riskDistributionWithPct,
     };
 
     return NextResponse.json({
